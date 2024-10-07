@@ -16,18 +16,19 @@
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            min-height: 100vh;
+            min-height: 100vh; /* Гарантируем, что высота body больше высоты экрана */
             background: linear-gradient(135deg, #ffefba, #f8d800);
             background-size: cover;
             background-repeat: no-repeat;
             position: relative;
-            overflow: hidden;
+            overflow: auto; /* Добавлено для обеспечения прокрутки */
         }
 
         h1 {
             text-align: center;
             margin-bottom: 20px;
             color: #333;
+            margin-top: 150px;
         }
 
         .video-grid {
@@ -46,7 +47,7 @@
         iframe {
             width: 100%;
             height: 315px;
-            position: relative; /* Делаем iframe относительным, чтобы избежать перекрытия */
+            position: relative; /* Делаем iframe относительным */
             z-index: 2; /* Устанавливаем z-index для отображения выше SVG */
         }
 
@@ -101,18 +102,18 @@
 
         /* Стиль для SVG */
         svg {
-            position: fixed; /* Изменено на fixed, чтобы оставаться на месте */
+            position: absolute; /* Оставляем absolute, чтобы SVG был на заднем плане */
             top: 0;
             left: 0;
             width: 100vw; /* Занимает всю ширину */
             height: 100vh; /* Занимает всю высоту */
             z-index: 1; /* Устанавливаем z-index ниже, чтобы не перекрывать видео */
-            object-fit: fill; /* Игнорируем пропорции */
+            pointer-events: none; /* Отключаем взаимодействие с SVG */
         }
     </style>
 </head>
 <body>
-    <h1>Видео галерея</h1>
+    <h1></h1>
     <div class="video-grid">
         <div class="video-item">
             <iframe src="https://www.youtube.com/embed/uP05coVgi7w" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -153,7 +154,7 @@
                 <feColorMatrix values="0 0 0 0.675 0
                     0 0 0 0.839 0
                     0 0 0 1.000 0
-                    0 1 0 0 0" result="r2" in="wave" type="matrix" data-idx="12"></feColorMatrix>
+                    0 0 1 0 0" result="r2" in="wave" type="matrix" data-idx="12"></feColorMatrix>
                 <feColorMatrix values="0 0 0 0.600 0
                     0 0 0 0.925 0
                     0 0 0 1.000 0
