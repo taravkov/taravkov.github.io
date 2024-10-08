@@ -125,7 +125,7 @@ svg {
     width: 100%;
     height: 32px; /* Высота ползунка */
     background: #ddd; /* Цвет фона ползунка */
-    border-radius: 5px; /* Закругленные углы */
+    border-radius: 3px; /* Закругленные углы */
     outline: none; /* Убираем контур при фокусировке */
 }
 
