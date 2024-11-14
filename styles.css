@@ -95,8 +95,8 @@ iframe {
 
 
 .avatar {
-    width: 200px;
-    height: 200px;
+    width: 210px;
+    height: 210px;
     border-radius: 50%;
     overflow: hidden;
     position: relative;
@@ -104,12 +104,9 @@ iframe {
 
 
 .avatar img {
-    width: 1400px;
-    height: 1400px;
+    width: 210px;
+    height: 210px;
     position: absolute;
-    top: -510px;
-    left: -595px;
-    transform: scale(0.3);
     transform-origin: center;
 }
 
