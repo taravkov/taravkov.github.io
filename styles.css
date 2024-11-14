@@ -5,14 +5,13 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
     padding: 20px;
-    min-height: 100vh; /* Гарантируем, что высота body больше высоты экрана */
+    min-height: 100vh;
     background: linear-gradient(135deg, #ffefba, #f8d800);
     background-size: cover;
     background-repeat: no-repeat;
     position: relative;
-    overflow: auto; /* Добавлено для обеспечения прокрутки */
+    overflow: auto;
 }
 
 h1 {
@@ -31,15 +30,15 @@ h1 {
 
 .video-item {
     width: 100%;
-    max-width: 560px; /* Ограничиваем максимальную ширину */
+    max-width: 560px;
     position: relative;
 }
 
 iframe {
     width: 100%;
     height: 315px;
-    position: relative; /* Делаем iframe относительным */
-    z-index: 2; /* Устанавливаем z-index для отображения выше SVG */
+    position: relative;
+    z-index: 2;
 }
 
 .video-placeholder {
@@ -65,10 +64,11 @@ iframe {
     width: 68px;
     height: 48px;
     cursor: pointer;
-    z-index: 3; /* Устанавливаем z-index для отображения выше */
+    z-index: 3;
 }
 
 @media (max-width: 768px) {
+
     iframe,
     .video-placeholder {
         height: 200px;
@@ -81,6 +81,7 @@ iframe {
 }
 
 @media (max-width: 480px) {
+
     iframe,
     .video-placeholder {
         height: 180px;
@@ -90,4 +91,34 @@ iframe {
         width: 40px;
         height: 28px;
     }
+}
+
+
+.avatar {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+}
+
+
+.avatar img {
+    width: 1400px;
+    height: 1400px;
+    position: absolute;
+    top: -510px;
+    left: -595px;
+    transform: scale(0.3);
+    transform-origin: center;
+}
+
+/* Стиль для текста */
+.avatar-text {
+    padding-top: 16px;
+    font-family: 'Roboto', sans-serif;
+    font-style: italic;
+    font-weight: 100;
+    font-size: 12px;
+    color: #333;
 }
