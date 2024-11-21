@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -20 200 100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50">
   <!-- Фон для контраста -->
 
   <!-- Пиксельный текст "TEE" -->
@@ -25,7 +25,7 @@
 
 <style>
 	svg {
-		/* width: 100%;
-		height: auto; */
+		width: auto;
+		height: 100px;
 	}
 </style>

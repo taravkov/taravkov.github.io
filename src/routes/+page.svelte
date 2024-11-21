@@ -404,10 +404,6 @@
 			margin: 0;
 		}
 
-		.right {
-			text-align: right;
-		}
-
 		dl dt {
 			display: inline-block;
 			margin-right: 0.3em;
