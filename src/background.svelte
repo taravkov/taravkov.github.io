@@ -1,4 +1,8 @@
 <script lang="ts">
+	import palettes from './assets/palettes/palettes2.json';
+
+	// console.log("imported palettes", palettes);
+
 	interface Color {
 		r: number;
 		g: number;
@@ -158,8 +162,8 @@
 		};
 
 		// two palettes we interpolate between
-		const palettes = [makeRandomPalette(), makeRandomPalette()];
-		console.log("palettes", palettes);
+		// const palettes = [makeRandomPalette(), makeRandomPalette()];
+		// console.log('palettes', palettes);
 
 		// current palette is edstablished durting animation
 		let palette: Color[] = [];

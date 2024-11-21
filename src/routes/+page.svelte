@@ -1,11 +1,17 @@
 <script>
-	import Background from "../background.svelte";
+	import Background from '../background.svelte';
+	import Layout from '../layout.svelte';
 </script>
 
-<Background/>
+<Background />
+<Layout />
 
 <style>
 	:global {
+		:root {
+			--color-neutral: #eee;
+		}
+
 		html,
 		body,
 		div,
