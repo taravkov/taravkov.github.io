@@ -1,5 +1,6 @@
 <script lang="ts">
-	import Cj from './nick-svg/cj.svelte';
+	import Coverflow from './coverflow.svelte';
+import Cj from './nick-svg/cj.svelte';
 	import Tee from './nick-svg/tee.svelte';
 
 	let activeTab = $state('actuelle');
@@ -33,7 +34,7 @@
 		{/if}
 
 		{#if activeTab === 'bag'}
-			<div class="main fade-in"></div>
+			<div class="main fade-in"><Coverflow/></div>
 		{/if}
 
 		{#if activeTab === 'photos'}
@@ -43,7 +44,7 @@
 		{#if activeTab === 'about'}
 			<div class="main fade-in">
 				<p>
-					CJ Tee is a computer mastermind. As soon as he discovers the connection between
+					CJ Tee is a digital mastermind. As soon as he discovers the connection between
 					technology, science, and music, there is no going back for him: he dedicates his life to
 					the pursuit of his art formulae. Always under the radar, he is constantly exploring new
 					sounds without genre boundaries, working both as a DJ and engineer, and pushing his
