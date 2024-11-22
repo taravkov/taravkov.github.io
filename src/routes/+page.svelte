@@ -9,7 +9,9 @@
 <style>
 	:global {
 		:root {
-			--color-neutral: #eee;
+			--color-neutral: #A9ABAB;
+			--color-main: #eee;
+			--color-special: #fff;
 		}
 
 		html,
@@ -309,9 +311,9 @@
 			font-feature-settings:
 				'ss01' on,
 				'ss05' on;
-			font-size: 1rem;
+			font-size: 16px;
 			letter-spacing: -0.001em;
-			line-height: 1.2;
+			line-height: 20px;
 			color: var(--color-neutral);
 			background-color: var(--color-main);
 		}
