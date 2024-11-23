@@ -9,6 +9,14 @@
 		activeTab = tab;
 		e.preventDefault();
 	};
+
+	const loadCovers = async () => {
+		const response = await fetch(
+			'https://api.discogs.com/users/cj_tee/collection/folders/0/releases'
+		);
+		const data = await response.json();
+		return data.releases.map((release) => release.basic_information.cover_image);
+	};
 </script>
 
 <div class="container">
@@ -34,7 +42,7 @@
 		{/if}
 
 		{#if activeTab === 'bag'}
-			<div class="main fade-in"><Coverflow /></div>
+			<div class="main fade-in"><Coverflow loadCovers={loadCovers} /></div>
 		{/if}
 
 		{#if activeTab === 'photos'}

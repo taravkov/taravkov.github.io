@@ -1,25 +1,28 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import gsap from 'gsap';
 	import ScrollTrigger from 'gsap/ScrollTrigger';
 	import Draggable from 'gsap/Draggable';
 
-	export let COVERS = [
-		'https://i.scdn.co/image/ab67616d00001e020ecc8c4fd215d9eb83cbfdb3',
-		'https://i.scdn.co/image/ab67616d00001e02d9194aa18fa4c9362b47464f',
-		'https://i.scdn.co/image/ab67616d00001e02a7ea08ab3914c5fb2084a8ac',
-		'https://i.scdn.co/image/ab67616d00001e0213ca80c3035333e5a6fcea59',
-		'https://i.scdn.co/image/ab67616d00001e02df04e6071763615d44643725',
-		'https://i.scdn.co/image/ab67616d00001e0239c7302c04f8d06f60e14403',
-		'https://i.scdn.co/image/ab67616d00001e021c0bcf8b536295438d26c70d',
-		'https://i.scdn.co/image/ab67616d00001e029bbd79106e510d13a9a5ec33',
-		'https://i.scdn.co/image/ab67616d00001e021d97ca7376f835055f828139',
-		'https://www.udiscovermusic.com/wp-content/uploads/2015/10/Kanye-West-Yeezus.jpg'
-	];
+	export let loadCovers; // Функция передается через пропсы
+	let covers = [];
+	let initialized = false; // Флаг, чтобы предотвратить повторную инициализацию
 
-	const COUNT = 10;
+	// Загружаем обложки и инициализируем GSAP
+	onMount(async () => {
+		if (typeof loadCovers === 'function') {
+			covers = await loadCovers();
+			await tick(); // Ждём, пока Svelte обновит DOM и элементы отрендерятся
+			initGSAP();
+		} else {
+			console.error('`loadCovers` is not a function or was not provided.');
+		}
+	});
 
-	onMount(() => {
+	// Инициализация GSAP
+	function initGSAP() {
+		if (initialized) return;
+		initialized = true;
 		gsap.registerPlugin(ScrollTrigger, Draggable);
 
 		const BOXES = gsap.utils.toArray('.box');
@@ -176,19 +179,21 @@
 				scrollToPosition(SCRUB.vars.position);
 			}
 		});
-	});
+	}
 </script>
 
 <div id="coverflow-scroller" class="body">
 	<div class="boxes">
-		{#each Array(COUNT)
-			.fill(0)
-			.map((_, b) => b) as b}
-			<div class="box" style="--src: url({COVERS[b]})">
-				<span>{b + 1}</span>
-				<img src={COVERS[b]} alt="Album cover {b + 1}" />
-			</div>
-		{/each}
+		{#if covers.length > 0}
+			{#each covers as cover, index}
+				<div class="box" style="--src: url({cover})">
+					<span>{index + 1}</span>
+					<img src={cover} alt="Album cover {index + 1}" />
+				</div>
+			{/each}
+		{:else}
+			<p>Loading covers...</p>
+		{/if}
 	</div>
 
 	<div class="drag-proxy"></div>
