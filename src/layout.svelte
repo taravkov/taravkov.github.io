@@ -56,7 +56,7 @@
 		{/if}
 
 		{#if activeTab === 'bag'}
-			<div class="main fade-in"><Coverflow {loadCovers} /></div>
+			<div class="main fade-in coverflow"><Coverflow {loadCovers} /></div>
 		{/if}
 
 		{#if activeTab === 'photos'}
@@ -258,6 +258,19 @@
 		.logo-wrap-right {
 			padding-left: 16px;
 			padding-top: 16px;
+		}
+		.navigation {
+			padding-top: 0px;
+			order: 1;
+		}
+		.header {
+			order: 2;
+		}
+		.main {
+			order: 3;
+		}
+		.main.coverflow {
+			margin-bottom: -16px;
 		}
 	}
 </style>

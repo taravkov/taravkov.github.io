@@ -11,6 +11,7 @@
 		:root {
 			--color-neutral: #a9abab;
 			--color-main: #eee;
+			--color-selection-bg: #000;
 			--color-special: #fff;
 		}
 
@@ -364,7 +365,7 @@
 		}
 
 		::selection {
-			background-color: var(--color-main);
+			background-color: var(--color-selection-bg);
 			color: var(--color-special);
 		}
 

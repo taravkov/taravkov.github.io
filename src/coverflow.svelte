@@ -218,9 +218,8 @@
 	}
 
 	.body {
-		display: grid;
+		display: block;
 		position: relative;
-		place-items: center;
 		height: 100%;
 		width: calc(100% + 32px);
 		margin-left: -16px;
