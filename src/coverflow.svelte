@@ -5,23 +5,35 @@
 	import Draggable from 'gsap/Draggable';
 
 	export let loadCovers; // Функция передается через пропсы
-	let covers = [];
-	let initialized = false; // Флаг, чтобы предотвратить повторную инициализацию
 
-	// Загружаем обложки и инициализируем GSAP
+	let covers = Array(50).fill('/record-placeholder.jpg'); // Изначально только плейсхолдеры
+	let initialized = false; // Флаг для предотвращения повторной инициализации GSAP
+
+	// Загрузка реальных обложек
 	onMount(async () => {
-		if (typeof loadCovers === 'function') {
-			covers = await loadCovers();
-			await tick(); // Ждём, пока Svelte обновит DOM и элементы отрендерятся
-			initGSAP();
-		} else {
-			console.error('`loadCovers` is not a function or was not provided.');
+		try {
+			if (typeof loadCovers === 'function') {
+				const loadedCovers = await loadCovers();
+				// Постепенно заменяем плейсхолдеры реальными обложками
+				loadedCovers.forEach((cover, index) => {
+					covers[index] = cover || '/record-placeholder.jpg';
+				});
+			} else {
+				console.error('`loadCovers` is not a function or was not provided.');
+			}
+		} catch (error) {
+			console.error('Error loading covers:', error);
+		}
+
+		// Убедиться, что GSAP инициализирован только один раз
+		if (!initialized) {
+			await tick(); // Ждем, пока DOM обновится
+			initGSAP(); // Инициализация GSAP
 		}
 	});
 
 	// Инициализация GSAP
 	function initGSAP() {
-		if (initialized) return;
 		initialized = true;
 		gsap.registerPlugin(ScrollTrigger, Draggable);
 
@@ -184,16 +196,12 @@
 
 <div id="coverflow-scroller" class="body">
 	<div class="boxes">
-		{#if covers.length > 0}
-			{#each covers as cover, index}
-				<div class="box" style="--src: url({cover})">
-					<span>{index + 1}</span>
-					<img src={cover} alt="Album cover {index + 1}" />
-				</div>
-			{/each}
-		{:else}
-			<p>Loading covers...</p>
-		{/if}
+		{#each covers as cover, index}
+			<div class="box" style="--src: url({cover})">
+				<span>{index + 1}</span>
+				<img src={cover} alt="Album cover {index + 1}" />
+			</div>
+		{/each}
 	</div>
 
 	<div class="drag-proxy"></div>

@@ -11,9 +11,23 @@
 	};
 
 	const loadCovers = async () => {
+		const ck = 'tXPDrPjvfDtJNDuxPViH';
+		const cs = 'ZAsUBWUqeRgrHLoRfZLUTTYrmHvkmUOw';
+
 		const response = await fetch(
-			'https://api.discogs.com/users/cj_tee/collection/folders/0/releases'
+			'https://api.discogs.com/users/cj_tee/collection/folders/0/releases',
+			{
+				headers: {
+					Authorization: `Discogs key=${ck}, secret=${cs}`
+				}
+			}
 		);
+
+		if (!response.ok) {
+			console.error('Failed to fetch data:', response.status, response.statusText);
+			return [];
+		}
+
 		const data = await response.json();
 		return data.releases.map((release) => release.basic_information.cover_image);
 	};
@@ -42,7 +56,7 @@
 		{/if}
 
 		{#if activeTab === 'bag'}
-			<div class="main fade-in"><Coverflow loadCovers={loadCovers} /></div>
+			<div class="main fade-in"><Coverflow {loadCovers} /></div>
 		{/if}
 
 		{#if activeTab === 'photos'}
