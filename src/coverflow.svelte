@@ -4,8 +4,6 @@
 	import ScrollTrigger from 'gsap/ScrollTrigger';
 	import Draggable from 'gsap/Draggable';
 
-	gsap.registerPlugin(ScrollTrigger, Draggable);
-
 	export let COVERS = [
 		'https://i.scdn.co/image/ab67616d00001e020ecc8c4fd215d9eb83cbfdb3',
 		'https://i.scdn.co/image/ab67616d00001e02d9194aa18fa4c9362b47464f',
@@ -22,6 +20,8 @@
 	const COUNT = 10;
 
 	onMount(() => {
+		gsap.registerPlugin(ScrollTrigger, Draggable);
+
 		const BOXES = gsap.utils.toArray('.box');
 
 		gsap.set('.box', { yPercent: -50 });
@@ -97,6 +97,7 @@
 			end: '+=2000',
 			horizontal: false,
 			pin: '.boxes',
+			scroller: '#coverflow-scroller',
 			onUpdate: (self) => {
 				const SCROLL = self.scroll();
 				if (SCROLL > self.end - 1) WRAP(1, 1);
@@ -158,9 +159,6 @@
 			});
 		}
 
-		document.querySelector('.next').addEventListener('click', NEXT);
-		document.querySelector('.prev').addEventListener('click', PREV);
-
 		gsap.set('.box', { display: 'block' });
 		gsap.set('button', { z: 200 });
 
@@ -181,44 +179,27 @@
 	});
 </script>
 
-<div class="boxes">
-	{#each Array(COUNT)
-		.fill(0)
-		.map((_, b) => b) as b}
-		<div class="box" style="--src: url({COVERS[b]})">
-			<span>{b + 1}</span>
-			<img src={COVERS[b]} alt="Album cover {b + 1}" />
-		</div>
-	{/each}
-
-	<div class="controls">
-		<button class="next">
-			<span>Previous album</span>
-			<svg viewBox="0 0 448 512" width="100" title="Previous Album">
-				<path
-					d="M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"
-				/>
-			</svg>
-		</button>
-		<button class="prev">
-			<span>Next album</span>
-			<svg viewBox="0 0 448 512" width="100" title="Next Album">
-				<path
-					d="M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"
-				/>
-			</svg>
-		</button>
+<div id="coverflow-scroller" class="body">
+	<div class="boxes">
+		{#each Array(COUNT)
+			.fill(0)
+			.map((_, b) => b) as b}
+			<div class="box" style="--src: url({COVERS[b]})">
+				<span>{b + 1}</span>
+				<img src={COVERS[b]} alt="Album cover {b + 1}" />
+			</div>
+		{/each}
 	</div>
+
+	<svg class="scroll-icon" viewBox="0 0 24 24">
+		<path
+			fill="currentColor"
+			d="M20 6H23L19 2L15 6H18V18H15L19 22L23 18H20V6M9 3.09C11.83 3.57 14 6.04 14 9H9V3.09M14 11V15C14 18.3 11.3 21 8 21S2 18.3 2 15V11H14M7 9H2C2 6.04 4.17 3.57 7 3.09V9Z"
+		/>
+	</svg>
+
+	<div class="drag-proxy"></div>
 </div>
-
-<svg class="scroll-icon" viewBox="0 0 24 24">
-	<path
-		fill="currentColor"
-		d="M20 6H23L19 2L15 6H18V18H15L19 22L23 18H20V6M9 3.09C11.83 3.57 14 6.04 14 9H9V3.09M14 11V15C14 18.3 11.3 21 8 21S2 18.3 2 15V11H14M7 9H2C2 6.04 4.17 3.57 7 3.09V9Z"
-	/>
-</svg>
-
-<div class="drag-proxy"></div>
 
 <style>
 	* {
@@ -230,14 +211,16 @@
 		--min-size: 200px;
 	}
 
-	body {
+	.body {
 		display: grid;
+		position: relative;
 		place-items: center;
-		min-height: 100vh;
+		height: 100%;
+		width: calc(100% + 32px);
+		margin-left: -16px;
+		margin-right: -16px;
 		padding: 0;
-		margin: 0;
-		overflow-y: hidden;
-		background: var(--bg);
+		overflow-y: scroll;
 	}
 
 	.drag-proxy {

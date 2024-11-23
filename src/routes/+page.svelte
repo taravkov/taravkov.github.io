@@ -9,7 +9,7 @@
 <style>
 	:global {
 		:root {
-			--color-neutral: #A9ABAB;
+			--color-neutral: #a9abab;
 			--color-main: #eee;
 			--color-special: #fff;
 		}
