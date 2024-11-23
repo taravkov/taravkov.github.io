@@ -95,7 +95,7 @@
 		const TRIGGER = ScrollTrigger.create({
 			start: 0,
 			end: '+=2000',
-			horizontal: false,
+			horizontal: true,
 			pin: '.boxes',
 			scroller: '#coverflow-scroller',
 			onUpdate: (self) => {
@@ -191,13 +191,6 @@
 		{/each}
 	</div>
 
-	<svg class="scroll-icon" viewBox="0 0 24 24">
-		<path
-			fill="currentColor"
-			d="M20 6H23L19 2L15 6H18V18H15L19 22L23 18H20V6M9 3.09C11.83 3.57 14 6.04 14 9H9V3.09M14 11V15C14 18.3 11.3 21 8 21S2 18.3 2 15V11H14M7 9H2C2 6.04 4.17 3.57 7 3.09V9Z"
-		/>
-	</svg>
-
 	<div class="drag-proxy"></div>
 </div>
 
@@ -228,98 +221,6 @@
 		position: absolute;
 	}
 
-	.controls {
-		position: absolute;
-		top: calc(50% + clamp(var(--min-size), 20vmin, 20vmin));
-		left: 50%;
-		transform: translate(-50%, -50%) scale(1.5);
-		display: flex;
-		justify-content: space-between;
-		min-width: var(--min-size);
-		height: 44px;
-		width: 20vmin;
-		z-index: 300;
-	}
-
-	button {
-		height: 48px;
-		width: 48px;
-		border-radius: 50%;
-		position: absolute;
-		top: 0%;
-		outline: transparent;
-		cursor: pointer;
-		background: none;
-		appearance: none;
-		border: 0;
-		transition: transform 0.1s;
-		transform: translate(0, calc(var(--y, 0)));
-	}
-
-	button:before {
-		border: 2px solid hsl(0, 0%, 90%);
-		background: linear-gradient(hsla(0, 0%, 80%, 0.65), hsl(0, 0%, 0%)) hsl(0, 0%, 0%);
-		content: '';
-		box-sizing: border-box;
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		height: 80%;
-		width: 80%;
-		border-radius: 50%;
-	}
-
-	button:active:before {
-		background: linear-gradient(hsl(0, 0%, 0%), hsla(0, 0%, 80%, 0.65)) hsl(0, 0%, 0%);
-	}
-
-	button:nth-of-type(1) {
-		right: 100%;
-	}
-
-	button:nth-of-type(2) {
-		left: 100%;
-	}
-
-	button span {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border-width: 0;
-	}
-
-	button:hover {
-		--y: -5%;
-	}
-
-	button svg {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%) rotate(0deg) translate(2%, 0);
-		height: 30%;
-		fill: hsl(0, 0%, 90%);
-	}
-
-	button:nth-of-type(1) svg {
-		transform: translate(-50%, -50%) rotate(180deg) translate(2%, 0);
-	}
-
-	.scroll-icon {
-		height: 30px;
-		position: fixed;
-		top: 1rem;
-		right: 1rem;
-		color: hsl(0, 0%, 90%);
-		animation: action 4s infinite;
-	}
-
 	@keyframes action {
 		0%,
 		25%,
@@ -334,7 +235,7 @@
 	}
 
 	.boxes {
-		height: 100vh;
+		height: 100%;
 		width: 100%;
 		overflow: hidden;
 		position: absolute;
