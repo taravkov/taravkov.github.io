@@ -7,16 +7,27 @@
 	export let loadCovers; // Функция передается через пропсы
 
 	let covers = Array(50).fill('/record-placeholder.jpg'); // Изначально только плейсхолдеры
-	let initialized = false; // Флаг для предотвращения повторной инициализации GSAP
+	let initialized = false; // Флаг для GSAP
 
-	// Загрузка реальных обложек
+	// Реактивный метод для обновления обложек
 	onMount(async () => {
+		gsap.registerPlugin(ScrollTrigger, Draggable);
+
+		if (!initialized) {
+			initGSAP(); // Инициализация GSAP
+			initialized = true;
+		}
+
 		try {
 			if (typeof loadCovers === 'function') {
 				const loadedCovers = await loadCovers();
-				// Постепенно заменяем плейсхолдеры реальными обложками
 				loadedCovers.forEach((cover, index) => {
-					covers[index] = cover || '/record-placeholder.jpg';
+					// Обновляем только src в img, не изменяя структуру DOM
+					covers[index] = cover && cover.includes('.jpeg') ? cover : '/record-placeholder.jpg';
+					const img = document.querySelector(`.box[data-index="${index}"] img`);
+					if (img) {
+						img.src = covers[index];
+					}
 				});
 			} else {
 				console.error('`loadCovers` is not a function or was not provided.');
@@ -24,19 +35,10 @@
 		} catch (error) {
 			console.error('Error loading covers:', error);
 		}
-
-		// Убедиться, что GSAP инициализирован только один раз
-		if (!initialized) {
-			await tick(); // Ждем, пока DOM обновится
-			initGSAP(); // Инициализация GSAP
-		}
 	});
 
 	// Инициализация GSAP
 	function initGSAP() {
-		initialized = true;
-		gsap.registerPlugin(ScrollTrigger, Draggable);
-
 		const BOXES = gsap.utils.toArray('.box');
 
 		gsap.set('.box', { yPercent: -50 });
@@ -196,10 +198,10 @@
 
 <div id="coverflow-scroller" class="body">
 	<div class="boxes">
-		{#each covers as cover, index}
-			<div class="box" style="--src: url({cover})">
-				<span>{index + 1}</span>
-				<img src={cover} alt="Album cover {index + 1}" />
+		<!-- Создаем элементы DOM один раз -->
+		{#each covers as _, index}
+			<div class="box" data-index={index}>
+				<img src="/record-placeholder.jpg" alt="Album cover {index + 1}" />
 			</div>
 		{/each}
 	</div>
