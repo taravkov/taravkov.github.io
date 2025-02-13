@@ -16,6 +16,10 @@ export default class ReactiveParticles extends THREE.Object3D {
   geometry: THREE.BoxGeometry = null!;
   pointsMesh: THREE.Object3D<THREE.Object3DEventMap> = null!;
 
+  // Сохраним параметры сетки для последующего использования
+  widthSeg: number = 20;
+  depthSeg: number = 20;
+
   constructor(mainHolder: THREE.Object3D) {
     super();
     this.name = 'ReactiveParticles';
@@ -27,9 +31,10 @@ export default class ReactiveParticles extends THREE.Object3D {
       autoRotate: true,
     };
     this.init(mainHolder);
-
     this.destroyMesh();
     this.createBoxMesh();
+    // После создания сетки точек, можно построить пирамиды
+    this.createPyramidsFromGrid();
     this.properties.autoMix = false;
   }
 
@@ -57,14 +62,16 @@ export default class ReactiveParticles extends THREE.Object3D {
       },
     });
 
-    this.resetMesh();
+    // Если потребуется обновлять что-либо
+    // this.resetMesh();
   }
 
   createBoxMesh() {
-    // Randomly generate segment counts for width, height, and depth to create varied box geometries
-    const widthSeg = Math.floor(/*THREE.MathUtils.randInt(5, 20)*/ 20);
-    // const heightSeg = Math.floor(/*THREE.MathUtils.randInt(1, 40)*/ 10);
-    const depthSeg = Math.floor(/*THREE.MathUtils.randInt(5, 80)*/ 20);
+    // Здесь создаем сетку точек
+    const widthSeg = this.widthSeg; // например, 20
+    const depthSeg = this.depthSeg; // например, 20
+
+    // Создаем "плоскую" BoxGeometry; размеры 1x1, сегменты задают количество делений
     this.geometry = new THREE.BoxGeometry(
       1,
       0,
@@ -74,65 +81,129 @@ export default class ReactiveParticles extends THREE.Object3D {
       depthSeg
     );
 
-    // Update shader material uniform for offset size with a random value
-    this.material.uniforms.offsetSize.value = Math.floor(
-      THREE.MathUtils.randInt(30, 60)
-    );
+    // Обновляем uniform для offsetSize случайным значением (если требуется)
+    this.material.uniforms.offsetSize.value = THREE.MathUtils.randInt(30, 60);
     this.material.needsUpdate = true;
 
-    // Create a container for the points mesh and set its orientation
+    // Создаем контейнер для точечного меша и задаем его ориентацию
     this.pointsMesh = new THREE.Object3D();
-    this.pointsMesh.rotateX(Math.PI / 2); // Rotate the mesh for better visual orientation
+    this.pointsMesh.rotateX(Math.PI / 2); // поворачиваем, чтобы сетка лежала в XY
     this.holderObjects.add(this.pointsMesh);
 
-    // Create a points mesh using the box geometry and the shader material
+    // Создаем Points-объект на основе геометрии и шейдерного материала
     const pointsMesh = new THREE.Points(this.geometry, this.material);
     this.pointsMesh.add(pointsMesh);
-
-    // // Animate the rotation of the of the container
-    // gsap.to(this.pointsMesh.rotation, {
-    //   duration: 3,
-    //   x: Math.random() * Math.PI,
-    //   z: Math.random() * Math.PI * 2,
-    //   ease: 'none', // No easing for a linear animation
-    // });
-    //
-    // gsap.to(this.position, {
-    //   duration: 0.6,
-    //   z: THREE.MathUtils.randInt(9, 11), // Random depth positioning within a range
-    //   ease: 'elastic.out(0.8)', // Elastic ease-out for a bouncy effect
-    // });
   }
 
-  resetMesh() {
-    if (this.properties.autoMix) {
-      this.destroyMesh();
-      this.createBoxMesh();
+  /**
+   * Для каждой ячейки, образованной сеткой точек (BoxGeometry),
+   * строим пирамиду, основание которой — четырехугольник из четырех соседних вершин,
+   * а апекс находится над центром с заданной высотой.
+   */
+  createPyramidsFromGrid() {
+    // Высота пирамиды (можно регулировать)
+    const pyramidHeight = 0.2;
 
-      // Animate the position of the mesh for an elastic movement effect
+    // Количество вершин по каждой оси
+    const gridCols = this.widthSeg + 1;
+    const gridRows = this.depthSeg + 1;
 
-      // // Animate the frequency uniform in the material, syncing with BPM if available
-      // gsap.to(this.material.uniforms.frequency, {
-      //   duration: App.bpmManager
-      //     ? (App.bpmManager.getBPMDuration() / 1000) * 2
-      //     : 2,
-      //   value: THREE.MathUtils.randFloat(0.5, 3), // Random frequency value for dynamic visual changes
-      //   ease: 'expo.easeInOut', // Smooth exponential transition for visual effect
-      // });
+    // Доступ к позиции вершин из BoxGeometry (уже в локальных координатах)
+    const posAttr = this.geometry.getAttribute('position');
+
+    // Для каждой ячейки (каждая ячейка определяется четырьмя соседними точками)
+    for (let i = 0; i < gridRows - 1; i++) {
+      for (let j = 0; j < gridCols - 1; j++) {
+        // Вычисляем индексы вершин ячейки
+        const indexA = i * gridCols + j; // A: нижний левый угол
+        const indexB = indexA + 1; // B: нижний правый угол
+        const indexD = (i + 1) * gridCols + j; // D: верхний левый угол
+        const indexC = indexD + 1; // C: верхний правый угол
+
+        // Извлекаем координаты вершин
+        const A = new THREE.Vector3().fromBufferAttribute(posAttr, indexA);
+        const B = new THREE.Vector3().fromBufferAttribute(posAttr, indexB);
+        const C = new THREE.Vector3().fromBufferAttribute(posAttr, indexC);
+        const D = new THREE.Vector3().fromBufferAttribute(posAttr, indexD);
+
+        console.log(
+          `[A, B, C, D] = [ [${A.toArray()}], [${B.toArray()}], [${C.toArray()}], [${D.toArray()}]] ]`
+        );
+
+        // Вычисляем центр основания ячейки
+        const center = new THREE.Vector3()
+          .add(A)
+          .add(B)
+          .add(C)
+          .add(D)
+          .multiplyScalar(0.25);
+
+        // Апекс пирамиды — центр плюс смещение по оси Z (т.к. после поворота плоскость лежит в XY)
+        const apex = center.clone();
+        apex.z += pyramidHeight;
+
+        // Формируем массив вершин для пирамидальной геометрии:
+        // Первые 4 вершины — основание (A, B, C, D), пятая — апекс.
+        const vertices = new Float32Array([
+          A.x,
+          A.y,
+          A.z, // 0: A
+          B.x,
+          B.y,
+          B.z, // 1: B
+          C.x,
+          C.y,
+          C.z, // 2: C
+          D.x,
+          D.y,
+          D.z, // 3: D
+          apex.x,
+          apex.y,
+          apex.z, // 4: Апекс
+        ]);
+
+        // Задаем индексы для граней:
+        // Основание (два треугольника): [A, B, C] и [A, C, D]
+        // Боковые грани (4 треугольника): [A, B, Апекс], [B, C, Апекс], [C, D, Апекс], [D, A, Апекс]
+        const indices = [
+          // Основание
+          0, 1, 2, 0, 2, 3,
+          // Боковые грани
+          0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4,
+        ];
+
+        // Создаем BufferGeometry для пирамиды
+        const pyramidGeo = new THREE.BufferGeometry();
+        pyramidGeo.setAttribute(
+          'position',
+          new THREE.BufferAttribute(vertices, 3)
+        );
+        pyramidGeo.setIndex(indices);
+        pyramidGeo.computeVertexNormals();
+
+        // Для наглядности можно задать отдельный материал (например, MeshBasicMaterial)
+        const pyramidMat = new THREE.MeshBasicMaterial({
+          color: 0xff0000,
+          side: THREE.DoubleSide,
+          wireframe: false,
+        });
+
+        // Создаем меш пирамиды и добавляем его в контейнер (например, в holderObjects)
+        const pyramidMesh = new THREE.Mesh(pyramidGeo, pyramidMat);
+        this.holderObjects.add(pyramidMesh);
+      }
     }
   }
 
   update() {
-    // this.material.uniforms.frequency.value = 0.8;
-    // this.material.uniforms.amplitude.value = 1;
-    // this.time += 0.2;
-    //
+    // Обновления, если необходимы, например, анимация шейдера
     // this.material.uniforms.time.value = this.time;
   }
 
   destroyMesh() {
     if (this.pointsMesh) {
       this.holderObjects.remove(this.pointsMesh);
+      // Очистка геометрии и материала, если требуется
       // this.pointsMesh.geometry?.dispose();
       // this.pointsMesh.material?.dispose();
       // this.pointsMesh = null;
