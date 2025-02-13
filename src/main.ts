@@ -6,9 +6,9 @@ export default class App {
   renderer: THREE.WebGLRenderer = null!;
   camera: THREE.PerspectiveCamera = null!;
   scene: THREE.Scene = null!;
-  particles: ReativeParticles;
-  width: number;
-  height: number;
+  particles: ReativeParticles = null!;
+  width: number = null!;
+  height: number = null!;
 
   constructor() {
     this.init();

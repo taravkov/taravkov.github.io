@@ -16,6 +16,7 @@ void main(){
   vec3 circ = vec3(circle(uv,1.));
 
   vec3 color=vec3(1.);
-  color = mix(startColor,endColor,vDistance);
-  gl_FragColor=vec4(color,circ.r * vDistance);
+//  color = mix(startColor,endColor,vDistance);
+//  gl_FragColor=vec4(color,circ.r * vDistance);
+  gl_FragColor=vec4(color,1);
 }

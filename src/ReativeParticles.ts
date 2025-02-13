@@ -11,10 +11,10 @@ export default class ReactiveParticles extends THREE.Object3D {
     autoMix: boolean;
     autoRotate: boolean;
   };
-  holderObjects: THREE.Object3D<THREE.Object3DEventMap>;
-  material: THREE.ShaderMaterial;
-  geometry: THREE.BoxGeometry;
-  pointsMesh: THREE.Object3D<THREE.Object3DEventMap>;
+  holderObjects: THREE.Object3D<THREE.Object3DEventMap> = null!;
+  material: THREE.ShaderMaterial = null!;
+  geometry: THREE.BoxGeometry = null!;
+  pointsMesh: THREE.Object3D<THREE.Object3DEventMap> = null!;
 
   constructor(mainHolder: THREE.Object3D) {
     super();
@@ -62,15 +62,15 @@ export default class ReactiveParticles extends THREE.Object3D {
 
   createBoxMesh() {
     // Randomly generate segment counts for width, height, and depth to create varied box geometries
-    const widthSeg = Math.floor(/*THREE.MathUtils.randInt(5, 20)*/ 5);
-    const heightSeg = Math.floor(/*THREE.MathUtils.randInt(1, 40)*/ 8);
-    const depthSeg = Math.floor(/*THREE.MathUtils.randInt(5, 80)*/ 10);
+    const widthSeg = Math.floor(/*THREE.MathUtils.randInt(5, 20)*/ 20);
+    // const heightSeg = Math.floor(/*THREE.MathUtils.randInt(1, 40)*/ 10);
+    const depthSeg = Math.floor(/*THREE.MathUtils.randInt(5, 80)*/ 20);
     this.geometry = new THREE.BoxGeometry(
       1,
-      1,
+      0,
       1,
       widthSeg,
-      heightSeg,
+      undefined,
       depthSeg
     );
 
