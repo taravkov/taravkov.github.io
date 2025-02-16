@@ -16,7 +16,7 @@ export default class ReactiveParticles extends THREE.Object3D {
   geometry: THREE.BoxGeometry = null!;
   pointsMesh: THREE.Object3D<THREE.Object3DEventMap> = null!;
 
-  // Параметры сетки (например, 32 ячейки по ширине и глубине)
+  // Параметры сетки
   widthSeg: number = 32;
   depthSeg: number = 32;
 
@@ -33,12 +33,9 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.init(mainHolder);
     this.destroyMesh();
     this.createBoxMesh();
-    // Создаем канопеи по двум схемам:
-    // – на точках сетки (вершинах) – вогнутые (центр опущен вниз),
-    // – в центрах ячеек – выпуклые (центр поднят вверх)
+    // Создаем канопеи по двум схемам и отмечаем маркеры
     this.createCanopiesFromGrid();
-    // После создания канопей отмечаем центры их краёв красными сферами
-    this.markEdgeCenters();
+    this.markEdgeAndCornerMarkers();
     this.properties.autoMix = false;
   }
 
@@ -94,10 +91,6 @@ export default class ReactiveParticles extends THREE.Object3D {
    * Создаем канопеи:
    * 1. Вогнутые канопеи на вершинах сетки.
    * 2. Выпуклые канопеи в центрах ячеек.
-   *
-   * Параметрическая функция для каждой канопеи определяется так, что по краям uv (0 или 1) z = 0,
-   * а в центре (u = 0.5, v = 0.5) достигается максимум (для выпуклой) или минимум (для вогнутой).
-   * Сохраняем параметры в userData для дальнейших вычислений.
    */
   createCanopiesFromGrid() {
     const gridWidth = 4096;
@@ -123,7 +116,7 @@ export default class ReactiveParticles extends THREE.Object3D {
       side: THREE.FrontSide,
     });
 
-    // Вогнутые канопеи (на вершинах)
+    // Вогнутые канопеи на вершинах
     for (let i = 0; i <= this.depthSeg; i++) {
       for (let j = 0; j <= this.widthSeg; j++) {
         const cx = -halfGrid + j * cellSize;
@@ -158,7 +151,7 @@ export default class ReactiveParticles extends THREE.Object3D {
       }
     }
 
-    // Выпуклые канопеи (в центрах ячеек)
+    // Выпуклые канопеи в центрах ячеек
     for (let i = 0; i < this.depthSeg; i++) {
       for (let j = 0; j < this.widthSeg; j++) {
         const x0_cell = -halfGrid + j * cellSize;
@@ -199,67 +192,86 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   /**
-   * Для каждой канопеи, вычисляем точки-центры её четырех сторон (в параметрическом пространстве):
-   * (u=0.5, v=0), (u=1, v=0.5), (u=0.5, v=1) и (u=0, v=0.5),
-   * и отмечаем их красными сферами.
+   * Отмечаем красными точками центры краёв (середины каждой стороны) и углы (точки пересечения) каждой канопеи.
+   * Центры краёв будут иметь меньший диаметр, чем угловые.
    */
-  markEdgeCenters() {
-    const redMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const sphereGeom = new THREE.SphereGeometry(5, 8, 8); // маленькая сфера
-    // Функция для вычисления точки по параметрам (u, v)
-    const computePoint = (
-      userData: any,
-      type: string,
-      u: number,
-      v: number
-    ) => {
-      // x = (1-u)*x0 + u*x1, y = (1-v)*y0 + v*y1.
-      const x = (1 - u) * userData.x0 + u * userData.x1;
-      const y = (1 - v) * userData.y0 + v * userData.y1;
-      let z = 0;
-      if (type === 'upward') {
-        z = userData.upwardHeight * 4 * u * (1 - u) * v * (1 - v);
-      } else if (type === 'downward') {
-        z = -userData.downwardDepth * 4 * u * (1 - u) * v * (1 - v);
-      }
-      return new THREE.Vector3(x, y, z);
-    };
+  markEdgeAndCornerMarkers() {
+    const markerMaterialEdge = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const markerMaterialCorner = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+    });
+    const edgeRadius = 2; // уменьшаем размер
+    const cornerRadius = 1; // еще меньше
 
-    // Перебираем все канопеи
     this.holderObjects.children.forEach((child) => {
-      if (child.type === 'Mesh' && child.userData && child.userData.type) {
-        const canopy = child as THREE.Mesh;
-        const type = canopy.userData.type;
-        // Точки: нижняя сторона (u=0.5,v=0), правая (u=1,v=0.5), верхняя (u=0.5,v=1), левая (u=0,v=0.5)
-        const pts = [
-          computePoint(canopy.userData, type, 0.5, 0),
-          computePoint(canopy.userData, type, 1, 0.5),
-          computePoint(canopy.userData, type, 0.5, 1),
-          computePoint(canopy.userData, type, 0, 0.5),
+      if (
+        child.type === 'Mesh' &&
+        child.userData &&
+        child.userData.x0 !== undefined
+      ) {
+        const { x0, x1, y0, y1 } = child.userData;
+        const leftCenter = new THREE.Vector3(x0, (y0 + y1) / 2, 0);
+        const rightCenter = new THREE.Vector3(x1, (y0 + y1) / 2, 0);
+        const topCenter = new THREE.Vector3((x0 + x1) / 2, y1, 0);
+        const bottomCenter = new THREE.Vector3((x0 + x1) / 2, y0, 0);
+        const corner1 = new THREE.Vector3(x0, y0, 0);
+        const corner2 = new THREE.Vector3(x1, y0, 0);
+        const corner3 = new THREE.Vector3(x0, y1, 0);
+        const corner4 = new THREE.Vector3(x1, y1, 0);
+
+        const sphereGeoEdge = new THREE.SphereGeometry(edgeRadius, 8, 8);
+        const sphereGeoCorner = new THREE.SphereGeometry(cornerRadius, 8, 8);
+
+        const edgeMarkers = [
+          new THREE.Mesh(sphereGeoEdge, markerMaterialEdge),
+          new THREE.Mesh(sphereGeoEdge, markerMaterialEdge),
+          new THREE.Mesh(sphereGeoEdge, markerMaterialEdge),
+          new THREE.Mesh(sphereGeoEdge, markerMaterialEdge),
         ];
-        pts.forEach((p) => {
-          const sphere = new THREE.Mesh(sphereGeom, redMaterial);
-          sphere.position.copy(p);
-          this.holderObjects.add(sphere);
+        edgeMarkers[0].position.copy(leftCenter);
+        edgeMarkers[1].position.copy(rightCenter);
+        edgeMarkers[2].position.copy(topCenter);
+        edgeMarkers[3].position.copy(bottomCenter);
+
+        const cornerMarkers = [
+          new THREE.Mesh(sphereGeoCorner, markerMaterialCorner),
+          new THREE.Mesh(sphereGeoCorner, markerMaterialCorner),
+          new THREE.Mesh(sphereGeoCorner, markerMaterialCorner),
+          new THREE.Mesh(sphereGeoCorner, markerMaterialCorner),
+        ];
+        cornerMarkers[0].position.copy(corner1);
+        cornerMarkers[1].position.copy(corner2);
+        cornerMarkers[2].position.copy(corner3);
+        cornerMarkers[3].position.copy(corner4);
+
+        edgeMarkers.forEach((marker) => {
+          this.holderObjects.add(marker);
+        });
+        cornerMarkers.forEach((marker) => {
+          this.holderObjects.add(marker);
         });
       }
     });
   }
 
   update() {
+    // Анимация "плавающих" вершин для основных канопей
     this.time += 0.01;
     const factor = 0.5 * (Math.sin(this.time) + 1);
     for (let i = 0; i < this.holderObjects.children.length; i++) {
       const child = this.holderObjects.children[i];
       if (child.type === 'Mesh' && child.userData && child.userData.type) {
         const mesh = child as THREE.Mesh;
+        // Пропускаем маркеры (у них userData.type не задан)
+        if (!mesh.userData.type) continue;
         const geo = mesh.geometry as THREE.BufferGeometry;
         const posAttr = geo.attributes.position;
+        const uvAttr = geo.attributes.uv;
         const count = posAttr.count;
         const { type, upwardHeight, downwardDepth } = mesh.userData;
         for (let j = 0; j < count; j++) {
-          const u = geo.attributes.uv.getX(j);
-          const v = geo.attributes.uv.getY(j);
+          const u = uvAttr.getX(j);
+          const v = uvAttr.getY(j);
           const base = 4 * u * (1 - u) * v * (1 - v);
           let targetZ;
           if (type === 'upward') {
