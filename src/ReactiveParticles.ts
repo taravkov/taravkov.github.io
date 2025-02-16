@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { VertexNormalsHelper } from 'three/addons/helpers/VertexNormalsHelper.js';
 import vertex from './glsl/vertex.glsl';
 import fragment from './glsl/fragment.glsl';
 import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
@@ -238,8 +237,7 @@ export default class ReactiveParticles extends THREE.Object3D {
         const uvAttr = geo.attributes.uv;
         const count = posAttr.count;
         // Извлекаем параметры, сохраненные при создании канопеи
-        const { type, x0, x1, y0, y1, upwardHeight, downwardDepth } =
-          mesh.userData;
+        const { type, upwardHeight, downwardDepth } = mesh.userData;
 
         // Для каждой вершины пересчитываем координату z
         for (let j = 0; j < count; j++) {
