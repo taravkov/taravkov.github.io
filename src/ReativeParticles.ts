@@ -33,7 +33,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.init(mainHolder);
     this.destroyMesh();
     this.createBoxMesh();
-    // Построим конусы для каждой ячейки сетки
+    // Построим конусы для каждой клетки сетки
     this.createConesFromGrid();
     this.properties.autoMix = false;
   }
@@ -94,8 +94,9 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   /**
-   * Для каждой клетки сетки (образованной четырьмя соседними вершинами BoxGeometry)
-   * создаём пирамиду (конус с 4 сегментами), вписанную в клетку с отступом.
+   * Для каждой клетки сетки (образованной четырьмя соседними вершинами)
+   * создаем пирамиду (конус с 4 сегментами), вписанную в клетку с отступом,
+   * а затем модифицируем её боковые грани, сгибая их внутрь в центральной точке.
    */
   createConesFromGrid() {
     const gridWidth = 4096; // общая ширина сетки
@@ -103,14 +104,15 @@ export default class ReactiveParticles extends THREE.Object3D {
     const halfGrid = gridWidth / 2; // 2048
     const f = 0.8; // коэффициент заполнения (80% от клетки)
     const s = cellSize * f; // сторона вписанного квадрата, например 102.4
-    const coneRadius = (s * Math.SQRT2) / 2; // радиус описанной окружности квадрата: s√2/2, ~72.4
-    const coneHeight = s; // высота пирамиды, можно задать по желанию
+    // Для того чтобы пирамиды (с квадратным основанием) были вписаны в клетку:
+    const coneRadius = (s * Math.SQRT2) / 2; // радиус описанной окружности квадрата
+    const coneHeight = s; // высота пирамиды
+    const bendOffset = 0.1 * coneHeight; // величина, на которую сгибаем грань
 
     // Перебираем все клетки (ячейки) сетки.
-    // Количество клеток по горизонтали и вертикали: widthSeg и depthSeg соответственно.
     for (let i = 0; i < this.depthSeg; i++) {
       for (let j = 0; j < this.widthSeg; j++) {
-        // Вычисляем границы клетки:
+        // Границы клетки:
         const x0 = -halfGrid + j * cellSize;
         const x1 = x0 + cellSize;
         const y0 = -halfGrid + i * cellSize;
@@ -119,46 +121,107 @@ export default class ReactiveParticles extends THREE.Object3D {
         const centerX = (x0 + x1) / 2;
         const centerY = (y0 + y1) / 2;
 
-        // Создаем конус с 4 радиальными сегментами.
-        // Используем thetaStart = Math.PI/4, чтобы основание (квадрат) было ориентировано
-        // так, что его стороны параллельны границам клетки.
+        // Создаем конус с 4 сегментами и смещением угла, чтобы основание было квадратным.
         const coneGeometry = new THREE.ConeGeometry(
           coneRadius,
           coneHeight,
-          4, // 4 сегмента – квадратное основание
-          1, // один сегмент по высоте
-          false, // не открытый (закрытый)
-          Math.PI / 4 // смещение угла для правильной ориентации
+          4, // 4 радиальных сегмента
+          1, // 1 сегмент по высоте (одиночный треугольник на каждую грань)
+          false, // не open-ended
+          Math.PI / 4 // поворот, чтобы квадрат был ориентирован по осям
         );
+        // Поворачиваем конус, чтобы его основание лежало в плоскости XY.
+        coneGeometry.rotateX(Math.PI / 2);
+
+        // Модифицируем геометрию: для каждой треугольной боковой грани
+        // добавляем центральную точку и смещаем её внутрь (вдоль нормали)
+        const bentGeometry = this.bendGeometryFaces(coneGeometry, bendOffset);
+
         const coneMaterial = new THREE.MeshBasicMaterial({
           color: 0xff0000,
           wireframe: true,
         });
-        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-
-        // По умолчанию ConeGeometry ориентирован вдоль оси Y (база на y=0, апекс на y=height).
-        // Нам нужно, чтобы основание лежало в плоскости XY (как и сетка).
-        // Поэтому поворачиваем конус вокруг оси X на -90°.
-        cone.rotation.x = Math.PI / 2;
+        const cone = new THREE.Mesh(bentGeometry, coneMaterial);
 
         // Позиционируем конус так, чтобы его центр совпадал с центром клетки.
         cone.position.set(centerX, centerY, 0);
 
-        // Добавляем конус в общий контейнер.
         this.holderObjects.add(cone);
       }
     }
   }
 
+  /**
+   * Принимает BufferGeometry и для каждой треугольной грани
+   * добавляет центральную точку, смещенную внутрь на offset,
+   * затем разбивает грань на 3 треугольника.
+   * Это создает эффект "изгиба" грани.
+   */
+  bendGeometryFaces(
+    geom: THREE.BufferGeometry,
+    offset: number
+  ): THREE.BufferGeometry {
+    // Преобразуем в неиндексированную геометрию, чтобы каждая грань была отдельной.
+    const nonIndexedGeom = geom.toNonIndexed();
+    const posAttr = nonIndexedGeom.getAttribute('position');
+    const vertexCount = posAttr.count; // должно быть кратно 3
+    const newPositions: number[] = [];
+
+    for (let i = 0; i < vertexCount; i += 3) {
+      const v0 = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+      const v1 = new THREE.Vector3().fromBufferAttribute(posAttr, i + 1);
+      const v2 = new THREE.Vector3().fromBufferAttribute(posAttr, i + 2);
+
+      // Вычисляем центр грани.
+      const centroid = new THREE.Vector3()
+        .add(v0)
+        .add(v1)
+        .add(v2)
+        .divideScalar(3);
+
+      // Вычисляем нормаль грани.
+      const edge1 = new THREE.Vector3().subVectors(v1, v0);
+      const edge2 = new THREE.Vector3().subVectors(v2, v0);
+      const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+
+      // Смещаем центр грани внутрь (вдоль обратного направления нормали).
+      const displacedCentroid = centroid
+        .clone()
+        .addScaledVector(normal, -offset);
+
+      // Разбиваем грань на 3 треугольника:
+      // (v0, v1, displacedCentroid), (v1, v2, displacedCentroid), (v2, v0, displacedCentroid)
+      newPositions.push(...v0.toArray());
+      newPositions.push(...v1.toArray());
+      newPositions.push(...displacedCentroid.toArray());
+
+      newPositions.push(...v1.toArray());
+      newPositions.push(...v2.toArray());
+      newPositions.push(...displacedCentroid.toArray());
+
+      newPositions.push(...v2.toArray());
+      newPositions.push(...v0.toArray());
+      newPositions.push(...displacedCentroid.toArray());
+    }
+
+    const newGeom = new THREE.BufferGeometry();
+    newGeom.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(newPositions, 3)
+    );
+    newGeom.computeVertexNormals();
+    return newGeom;
+  }
+
   update() {
-    // Здесь можно обновлять uniforms или анимировать объект (например, вращать сцену)
+    // Здесь можно обновлять uniforms или анимировать объект
     // this.material.uniforms.time.value = this.time;
   }
 
   destroyMesh() {
     if (this.pointsMesh) {
       this.holderObjects.remove(this.pointsMesh);
-      // Очистка геометрии и материала при необходимости:
+      // Опционально: очистка геометрии и материала
       // this.pointsMesh.geometry?.dispose();
       // this.pointsMesh.material?.dispose();
       // this.pointsMesh = null;
