@@ -34,9 +34,9 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.init(mainHolder);
     this.destroyMesh();
     this.createBoxMesh();
-    // Создаем чередующиеся канопии:
-    // – на точках сетки (вершинах) – канопии, уходящие вглубь (вогнутые),
-    // – между ними (в центрах ячеек) – канопии, уходящие вверх (выпуклые)
+    // Создаем канопеи по двум схемам:
+    // – на точках сетки (вершинах) – вогнутые (центр опущен вниз),
+    // – в центрах ячеек – выпуклые (центр поднят вверх)
     this.createCanopiesFromGrid();
     this.properties.autoMix = false;
   }
@@ -92,12 +92,14 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   /**
-   * Создаем канопии по двум схемам:
-   * 1. На точках сетки (вершинах) – канопии с вогнутой формой (их центр опущен вниз).
-   * 2. В центрах ячеек – канопии с выпуклой формой (их центр поднят вверх).
+   * Создаем канопеи по двум схемам:
+   * 1. На точках сетки (вершинах) – вогнутые (их центр опущен вниз).
+   * 2. В центрах ячеек – выпуклые (их центр поднят вверх).
    *
-   * Для каждой канопии по краям (u=0 или 1, v=0 или 1) z = 0, а в центре (u = 0.5, v = 0.5)
+   * Для каждой канопеи по краям (u=0 или 1, v=0 или 1) z = 0, а в центре (u = 0.5, v = 0.5)
    * достигается максимум (для выпуклой) или минимум (для вогнутой).
+   *
+   * В дополнение мы сохраняем в userData параметры канопеи для дальнейшей анимации.
    */
   createCanopiesFromGrid() {
     const gridWidth = 4096;
@@ -106,13 +108,14 @@ export default class ReactiveParticles extends THREE.Object3D {
     const segmentsU = 20;
     const segmentsV = 20;
 
-    // Для удобства зададим базовый размер для каждой канопии – пусть будет половина от cellSize
-    const canopyBase = cellSize / 2; // то есть 64, чтобы между соседними канопиями не было полного слияния
-    // Определяем высоту для выпуклой канопии и глубину для вогнутой (можно настроить)
-    const upwardHeight = canopyBase * 1.5; // например, 32
-    const downwardDepth = canopyBase * 1.5; // например, 32
+    // Базовый размер для канопеи – чтобы они не сливались полностью
+    const canopyBase = cellSize / 2; // например, 64
 
-    // Материал для канопий, уходящих вверх (выпуклых)
+    // Определяем высоту для выпуклой канопеи и глубину для вогнутой
+    const upwardHeight = canopyBase * 1.5;
+    const downwardDepth = canopyBase * 1.5;
+
+    // Материалы для канопей (просто стандартные, без шейдерной анимации)
     const upwardMaterial = new THREE.MeshStandardMaterial({
       color: 0xffaa00,
       metalness: 1.0,
@@ -120,7 +123,6 @@ export default class ReactiveParticles extends THREE.Object3D {
       side: THREE.FrontSide,
     });
 
-    // Материал для канопий, уходящих вниз (вогнутых)
     const downwardMaterial = new THREE.MeshStandardMaterial({
       color: 0x00aaff,
       metalness: 1.0,
@@ -128,13 +130,11 @@ export default class ReactiveParticles extends THREE.Object3D {
       side: THREE.FrontSide,
     });
 
-    // 1. Канопии на точках сетки (вершинах) – вогнутые (центр опущен вниз)
+    // 1. Вогнутые канопеи на точках сетки (вершинах)
     for (let i = 0; i <= this.depthSeg; i++) {
       for (let j = 0; j <= this.widthSeg; j++) {
-        // Координаты вершины сетки
         const cx = -halfGrid + j * cellSize;
         const cy = -halfGrid + i * cellSize;
-        // Определяем квадрат для канопии вокруг вершины: от (cx - canopyBase/2, cy - canopyBase/2) до (cx + canopyBase/2, cy + canopyBase/2)
         const x0 = cx - canopyBase / 2;
         const x1 = cx + canopyBase / 2;
         const y0 = cy - canopyBase / 2;
@@ -147,7 +147,7 @@ export default class ReactiveParticles extends THREE.Object3D {
         ) => {
           target.x = (1 - u) * x0 + u * x1;
           target.y = (1 - v) * y0 + v * y1;
-          // Форма вогнутой поверхности: по краям z = 0, в центре (u=0.5, v=0.5) z = -downwardDepth
+          // Исходная вогнутая форма
           target.z = -downwardDepth * 4 * u * (1 - u) * v * (1 - v);
         };
 
@@ -156,23 +156,32 @@ export default class ReactiveParticles extends THREE.Object3D {
           segmentsU,
           segmentsV
         );
+        // Сохраним параметры для анимации:
         const mesh = new THREE.Mesh(geometry, downwardMaterial);
+        mesh.userData = {
+          type: 'downward', // исходное состояние вогнутости
+          x0,
+          x1,
+          y0,
+          y1,
+          upwardHeight,
+          downwardDepth,
+          segmentsU,
+          segmentsV,
+        };
         this.holderObjects.add(mesh);
       }
     }
 
-    // 2. Канопии в центрах ячеек – выпуклые (центр поднят вверх)
+    // 2. Выпуклые канопеи в центрах ячеек
     for (let i = 0; i < this.depthSeg; i++) {
       for (let j = 0; j < this.widthSeg; j++) {
-        // Границы текущей ячейки
         const x0_cell = -halfGrid + j * cellSize;
         const x1_cell = x0_cell + cellSize;
         const y0_cell = -halfGrid + i * cellSize;
         const y1_cell = y0_cell + cellSize;
-        // Центр ячейки
         const cx = (x0_cell + x1_cell) / 2;
         const cy = (y0_cell + y1_cell) / 2;
-        // Определяем квадрат для канопии вокруг центра ячейки
         const x0 = cx - canopyBase / 2;
         const x1 = cx + canopyBase / 2;
         const y0 = cy - canopyBase / 2;
@@ -185,7 +194,7 @@ export default class ReactiveParticles extends THREE.Object3D {
         ) => {
           target.x = (1 - u) * x0 + u * x1;
           target.y = (1 - v) * y0 + v * y1;
-          // Форма выпуклой поверхности: по краям z = 0, в центре (u=0.5, v=0.5) z = upwardHeight
+          // Исходная выпуклая форма
           target.z = upwardHeight * 4 * u * (1 - u) * v * (1 - v);
         };
 
@@ -195,13 +204,72 @@ export default class ReactiveParticles extends THREE.Object3D {
           segmentsV
         );
         const mesh = new THREE.Mesh(geometry, upwardMaterial);
+        mesh.userData = {
+          type: 'upward', // исходное состояние выпуклости
+          x0,
+          x1,
+          y0,
+          y1,
+          upwardHeight,
+          downwardDepth,
+          segmentsU,
+          segmentsV,
+        };
         this.holderObjects.add(mesh);
       }
     }
   }
 
   update() {
-    // Здесь можно обновлять uniforms или анимировать объект
+    // Обновляем общее время анимации
+    this.time += 0.01;
+    // Вычисляем анимационный фактор, циклически меняющийся от 0 до 1 и обратно.
+    // Например, используя синус:
+    const factor = 0.5 * (Math.sin(this.time) + 1); // factor = 0 => исходное состояние, factor = 1 => обмен
+
+    // Перебираем все канопеи (исключая pointsMesh)
+    for (let i = 0; i < this.holderObjects.children.length; i++) {
+      const child = this.holderObjects.children[i];
+      // Обновляем только меши, у которых есть userData.type (то есть канопеи)
+      if (child.type === 'Mesh' && child.userData && child.userData.type) {
+        const mesh = child as THREE.Mesh;
+        const geo = mesh.geometry as THREE.BufferGeometry;
+        const posAttr = geo.attributes.position;
+        const uvAttr = geo.attributes.uv;
+        const count = posAttr.count;
+        // Извлекаем параметры, сохраненные при создании канопеи
+        const { type, x0, x1, y0, y1, upwardHeight, downwardDepth } =
+          mesh.userData;
+
+        // Для каждой вершины пересчитываем координату z
+        for (let j = 0; j < count; j++) {
+          // Получаем u и v из uv-атрибута
+          const u = uvAttr.getX(j);
+          const v = uvAttr.getY(j);
+          // Базовое значение формы: 4 * u * (1 - u) * v * (1 - v)
+          const base = 4 * u * (1 - u) * v * (1 - v);
+          let targetZ;
+          if (type === 'upward') {
+            // Для исходно выпуклой канопеи: при factor=0 z = upward, при factor=1 z = -downwardDepth
+            targetZ = THREE.MathUtils.lerp(
+              upwardHeight * base,
+              -downwardDepth * base,
+              factor
+            );
+          } else {
+            // Для исходно вогнутой канопеи: при factor=0 z = -downwardDepth, при factor=1 z = upwardHeight
+            targetZ = THREE.MathUtils.lerp(
+              -downwardDepth * base,
+              upwardHeight * base,
+              factor
+            );
+          }
+          // Обновляем только z, x и y остаются прежними
+          posAttr.setZ(j, targetZ);
+        }
+        posAttr.needsUpdate = true;
+      }
+    }
   }
 
   destroyMesh() {
