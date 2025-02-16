@@ -67,30 +67,31 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   createBoxMesh() {
-    // Здесь создаем сетку точек
-    const widthSeg = this.widthSeg; // например, 20
-    const depthSeg = this.depthSeg; // например, 20
+    // Задаем число сегментов для сетки
+    const widthSeg = Math.floor(32);
+    const depthSeg = Math.floor(32);
 
-    // Создаем "плоскую" BoxGeometry; размеры 1x1, сегменты задают количество делений
+    // Создаем BoxGeometry размером 8192 на 8192.
+    // Благодаря тому, что геометрия центрирована, вершины будут в диапазоне [-4096, 4096].
     this.geometry = new THREE.BoxGeometry(
-      1,
-      0,
-      1,
+      4096, // ширина
+      0, // высота (плоская сетка)
+      4096, // глубина
       widthSeg,
       undefined,
       depthSeg
     );
 
-    // Обновляем uniform для offsetSize случайным значением (если требуется)
+    // Обновляем uniform для offsetSize (например, случайное значение)
     this.material.uniforms.offsetSize.value = THREE.MathUtils.randInt(30, 60);
     this.material.needsUpdate = true;
 
-    // Создаем контейнер для точечного меша и задаем его ориентацию
+    // Создаем контейнер для точечного меша и поворачиваем его, чтобы сетка лежала в плоскости XY
     this.pointsMesh = new THREE.Object3D();
-    this.pointsMesh.rotateX(Math.PI / 2); // поворачиваем, чтобы сетка лежала в XY
+    this.pointsMesh.rotateX(Math.PI / 2);
     this.holderObjects.add(this.pointsMesh);
 
-    // Создаем Points-объект на основе геометрии и шейдерного материала
+    // Создаем Points-меш на основе геометрии и шейдерного материала
     const pointsMesh = new THREE.Points(this.geometry, this.material);
     this.pointsMesh.add(pointsMesh);
   }
@@ -129,6 +130,15 @@ export default class ReactiveParticles extends THREE.Object3D {
         console.log(
           `[A, B, C, D] = [ [${A.toArray()}], [${B.toArray()}], [${C.toArray()}], [${D.toArray()}]] ]`
         );
+
+        const geometry = new THREE.PlaneGeometry(100, 100);
+        this.geometry.rotateX(Math.PI / 2);
+        const material = new THREE.MeshBasicMaterial({
+          color: 0xffff00,
+          side: THREE.DoubleSide,
+        });
+        const plane = new THREE.Mesh(geometry, material);
+        this.holderObjects.add(plane);
 
         // Вычисляем центр основания ячейки
         const center = new THREE.Vector3()

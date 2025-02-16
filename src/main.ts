@@ -32,7 +32,15 @@ export default class App {
       1000
     );
     // this.camera = new THREE.OrthographicCamera(100, 100, 100, 1000, 100, 1000);
-    this.camera.position.z = 7;
+    // this.camera.position.x = -17;
+    // this.camera.lookAt(new THREE.Vector3(1, 1, 17));
+
+    // this.camera.position.x = 0.05;
+    this.camera.position.z = 1600;
+    this.camera.zoom = 0.05;
+    console.log('camera X', this.camera.position.x);
+    console.log('camera Y', this.camera.position.y);
+    console.log('camera Z', this.camera.position.z);
     this.camera.frustumCulled = false;
 
     this.scene = new THREE.Scene();
