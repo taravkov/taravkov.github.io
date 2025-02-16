@@ -33,7 +33,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.init(mainHolder);
     this.destroyMesh();
     this.createBoxMesh();
-    // Построим конусы для каждой клетки сетки с гладкой изогнутой поверхностью граней
+    // Построим конусы для каждой клетки сетки
     this.createConesFromGrid();
     this.properties.autoMix = false;
   }
@@ -68,7 +68,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     const depthSeg = Math.floor(this.depthSeg);
 
     // Создаем BoxGeometry размером 4096 x 4096.
-    // Геометрия центрирована, поэтому вершины располагаются от -2048 до 2048.
+    // Геометрия центрирована, поэтому координаты вершин располагаются от -2048 до 2048.
     this.geometry = new THREE.BoxGeometry(
       4096, // ширина
       0, // высота (плоская сетка)
@@ -81,6 +81,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.material.uniforms.offsetSize.value = THREE.MathUtils.randInt(30, 60);
     this.material.needsUpdate = true;
 
+    // Создаем контейнер для Points-меша и поворачиваем его, чтобы сетка оказалась в плоскости XY.
     this.pointsMesh = new THREE.Object3D();
     this.pointsMesh.rotateX(Math.PI / 2);
     this.holderObjects.add(this.pointsMesh);
@@ -90,8 +91,9 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   /**
-   * Для каждой клетки сетки создаем конус (пирамиду) с квадратным основанием,
-   * вписанный в клетку, а затем модифицируем боковые грани так, чтобы они стали гладко изогнутыми.
+   * Для каждой клетки сетки (образованной четырьмя соседними вершинами)
+   * создаем пирамиду (конус с 4 сегментами), вписанную в клетку с отступом,
+   * а затем применяем субдивизию и сглаживание граней, чтобы получить ровную, закругленную поверхность.
    */
   createConesFromGrid() {
     const gridWidth = 4096; // общая ширина сетки
@@ -99,13 +101,13 @@ export default class ReactiveParticles extends THREE.Object3D {
     const halfGrid = gridWidth / 2; // 2048
     const f = 0.8; // коэффициент заполнения (80% от клетки)
     const s = cellSize * f; // сторона вписанного квадрата (например, ~102.4)
-    // Чтобы пирамиды вписывались в клетку:
-    const coneRadius = (s * Math.SQRT2) / 2; // ~s√2/2
+    const coneRadius = (s * Math.SQRT2) / 2; // радиус описанной окружности квадрата
     const coneHeight = s; // высота пирамиды
-    // offset для изгиба (на сколько "вглубь" смещаем центральную точку грани)
-    const bendOffset = 0.15 * coneHeight;
+    const bendOffset = 0.15 * coneHeight; // величина изгиба граней
 
-    // Для каждой клетки
+    // Устанавливаем число субдивизий для гладкости поверхности (теперь 16)
+    const subdivisions = 16;
+
     for (let i = 0; i < this.depthSeg; i++) {
       for (let j = 0; j < this.widthSeg; j++) {
         const x0 = -halfGrid + j * cellSize;
@@ -129,8 +131,6 @@ export default class ReactiveParticles extends THREE.Object3D {
         coneGeometry.rotateX(Math.PI / 2);
 
         // Применяем субдивизию и сглаживание для изгиба граней.
-        // Зададим число субдивизий (например, 4 или 8).
-        const subdivisions = 4;
         const curvedGeom = this.subdivideAndCurveGeometry(
           coneGeometry,
           bendOffset,
@@ -150,7 +150,7 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   /**
-   * Принимает входную геометрию (BufferGeometry) и для каждой треугольной грани
+   * Принимает BufferGeometry и для каждой треугольной грани
    * субдивидирует её на маленькие треугольники, а затем сглаживает (изгибает) поверхность,
    * смещая внутренние вершины вдоль нормали на величину, зависящую от расстояния до центра.
    * subdivisions – число субдивизий по каждой стороне исходного треугольника.
@@ -160,7 +160,6 @@ export default class ReactiveParticles extends THREE.Object3D {
     offset: number,
     subdivisions: number
   ): THREE.BufferGeometry {
-    // Преобразуем геометрию в неиндексированную (каждая грань отдельно).
     const nonIndexed = geom.toNonIndexed();
     const posAttr = nonIndexed.getAttribute('position');
     const vertexCount = posAttr.count; // должно быть кратно 3
@@ -168,19 +167,16 @@ export default class ReactiveParticles extends THREE.Object3D {
     const indices: number[] = [];
     let indexOffset = 0;
 
-    // Для каждой треугольной грани:
     for (let i = 0; i < vertexCount; i += 3) {
       const v0 = new THREE.Vector3().fromBufferAttribute(posAttr, i);
       const v1 = new THREE.Vector3().fromBufferAttribute(posAttr, i + 1);
       const v2 = new THREE.Vector3().fromBufferAttribute(posAttr, i + 2);
-      // Вычисляем нормаль грани
       const normal = new THREE.Vector3()
         .crossVectors(
           new THREE.Vector3().subVectors(v1, v0),
           new THREE.Vector3().subVectors(v2, v0)
         )
         .normalize();
-      // Субдивидируем эту грань на patch с гладким изгибом.
       const { positions: patchPos, indices: patchIdx } =
         this.subdivideAndCurveTriangle(
           v0,
@@ -190,7 +186,6 @@ export default class ReactiveParticles extends THREE.Object3D {
           offset,
           subdivisions
         );
-      // Добавляем полученные вершины и индексы.
       positions.push(...patchPos);
       patchIdx.forEach((idx) => indices.push(idx + indexOffset));
       indexOffset += patchPos.length / 3;
@@ -235,7 +230,6 @@ export default class ReactiveParticles extends THREE.Object3D {
     );
 
     let idx = 0;
-    // Заполняем сетку точек в треугольнике по барицентрическим координатам.
     for (let i = 0; i <= subdivisions; i++) {
       const row: number[] = [];
       for (let j = 0; j <= subdivisions - i; j++) {
@@ -243,17 +237,14 @@ export default class ReactiveParticles extends THREE.Object3D {
         const a = i / subdivisions;
         const b = j / subdivisions;
         const c = k / subdivisions;
-        // Позиция без изгиба:
         const pos = new THREE.Vector3()
           .copy(v0)
           .multiplyScalar(a)
           .add(new THREE.Vector3().copy(v1).multiplyScalar(b))
           .add(new THREE.Vector3().copy(v2).multiplyScalar(c));
-        // Вычисляем нормализованное расстояние до центра (0 у краёв, 1 в центре)
         const d = pos.distanceTo(centroid);
-        const t = 1 - d / maxDist; // чем ближе к центру, тем больше t
+        const t = 1 - d / maxDist;
         const disp = t * offset;
-        // Смещаем точку вдоль отрицательной нормали
         pos.addScaledVector(normal, -disp);
         positions.push(pos.x, pos.y, pos.z);
         row.push(idx);
@@ -261,7 +252,6 @@ export default class ReactiveParticles extends THREE.Object3D {
       }
       vertexIndices.push(row);
     }
-    // Формируем индексы для треугольников внутри patch
     for (let i = 0; i < vertexIndices.length - 1; i++) {
       for (let j = 0; j < vertexIndices[i].length - 1; j++) {
         const a = vertexIndices[i][j];
@@ -279,13 +269,11 @@ export default class ReactiveParticles extends THREE.Object3D {
 
   update() {
     // Здесь можно обновлять uniforms или анимировать объект.
-    // Например, вращать сцену или изменять offset со временем.
   }
 
   destroyMesh() {
     if (this.pointsMesh) {
       this.holderObjects.remove(this.pointsMesh);
-      // Опционально: очистка геометрии и материала.
     }
   }
 }
