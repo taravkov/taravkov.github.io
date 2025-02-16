@@ -16,9 +16,9 @@ export default class ReactiveParticles extends THREE.Object3D {
   geometry: THREE.BoxGeometry = null!;
   pointsMesh: THREE.Object3D<THREE.Object3DEventMap> = null!;
 
-  // Сохраним параметры сетки для последующего использования
-  widthSeg: number = 20;
-  depthSeg: number = 20;
+  // Параметры сетки
+  widthSeg: number = 32;
+  depthSeg: number = 32;
 
   constructor(mainHolder: THREE.Object3D) {
     super();
@@ -33,8 +33,8 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.init(mainHolder);
     this.destroyMesh();
     this.createBoxMesh();
-    // После создания сетки точек, можно построить пирамиды
-    this.createPyramidsFromGrid();
+    // Построим конусы для каждой ячейки сетки
+    this.createConesFromGrid();
     this.properties.autoMix = false;
   }
 
@@ -61,18 +61,15 @@ export default class ReactiveParticles extends THREE.Object3D {
         endColor: { value: new THREE.Color(this.properties.endColor) },
       },
     });
-
-    // Если потребуется обновлять что-либо
-    // this.resetMesh();
   }
 
   createBoxMesh() {
     // Задаем число сегментов для сетки
-    const widthSeg = Math.floor(32);
-    const depthSeg = Math.floor(32);
+    const widthSeg = Math.floor(this.widthSeg);
+    const depthSeg = Math.floor(this.depthSeg);
 
-    // Создаем BoxGeometry размером 8192 на 8192.
-    // Благодаря тому, что геометрия центрирована, вершины будут в диапазоне [-4096, 4096].
+    // Создаем BoxGeometry размером 4096 x 4096.
+    // Геометрия центрирована, поэтому координаты вершин располагаются от -2048 до 2048.
     this.geometry = new THREE.BoxGeometry(
       4096, // ширина
       0, // высота (плоская сетка)
@@ -86,7 +83,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.material.uniforms.offsetSize.value = THREE.MathUtils.randInt(30, 60);
     this.material.needsUpdate = true;
 
-    // Создаем контейнер для точечного меша и поворачиваем его, чтобы сетка лежала в плоскости XY
+    // Создаем контейнер для Points-меша и поворачиваем его, чтобы сетка оказалась в плоскости XY.
     this.pointsMesh = new THREE.Object3D();
     this.pointsMesh.rotateX(Math.PI / 2);
     this.holderObjects.add(this.pointsMesh);
@@ -97,123 +94,75 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   /**
-   * Для каждой ячейки, образованной сеткой точек (BoxGeometry),
-   * строим пирамиду, основание которой — четырехугольник из четырех соседних вершин,
-   * а апекс находится над центром с заданной высотой.
+   * Для каждой ячейки сетки (образованной четырьмя соседними вершинами) создаем конус,
+   * так что базовые вершины конуса совпадают с углами ячейки.
+   *
+   * Для этого:
+   * - Определяем размер ячейки: cellSize = ширина / число сегментов.
+   * - Центр ячейки: (x0+x1)/2, (y0+y1)/2, где x0 = -2048 + j*cellSize, x1 = -2048 + (j+1)*cellSize,
+   *   y0 = -2048 + i*cellSize, y1 = -2048 + (i+1)*cellSize.
+   * - Чтобы конус с 4 сегментами (радиальная сегментация = 4) имел квадратное основание с углами,
+   *   задаем thetaStart = π/4. Радиус должен быть равен (cellSize/2)*√2, чтобы расстояние от центра до угла было cellSize/2.
    */
-  createPyramidsFromGrid() {
-    // Высота пирамиды (можно регулировать)
-    const pyramidHeight = 0.2;
+  createConesFromGrid() {
+    const gridWidth = 4096; // ширина сетки
+    const cellSize = gridWidth / this.widthSeg; // размер ячейки, например 4096/32 = 128
+    const halfGrid = gridWidth / 2; // 2048
+    // Радиус конуса так, чтобы при thetaStart = π/4 базовые вершины были в углах ячейки:
+    const coneRadius = (cellSize / 2) * Math.SQRT2; // (cellSize/2)*√2
+    const coneHeight = cellSize; // можно задать высоту равной размеру ячейки
 
-    // Количество вершин по каждой оси
-    const gridCols = this.widthSeg + 1;
-    const gridRows = this.depthSeg + 1;
+    // Перебираем ячейки по i и j (каждая ячейка определяется четырьмя соседними вершинами)
+    for (let i = 0; i < this.depthSeg; i++) {
+      for (let j = 0; j < this.widthSeg; j++) {
+        // Вычисляем границы ячейки.
+        const x0 = -halfGrid + j * cellSize;
+        const x1 = -halfGrid + (j + 1) * cellSize;
+        const y0 = -halfGrid + i * cellSize;
+        const y1 = -halfGrid + (i + 1) * cellSize;
+        // Центр ячейки
+        const centerX = (x0 + x1) / 2;
+        const centerY = (y0 + y1) / 2;
 
-    // Доступ к позиции вершин из BoxGeometry (уже в локальных координатах)
-    const posAttr = this.geometry.getAttribute('position');
-
-    // Для каждой ячейки (каждая ячейка определяется четырьмя соседними точками)
-    for (let i = 0; i < gridRows - 1; i++) {
-      for (let j = 0; j < gridCols - 1; j++) {
-        // Вычисляем индексы вершин ячейки
-        const indexA = i * gridCols + j; // A: нижний левый угол
-        const indexB = indexA + 1; // B: нижний правый угол
-        const indexD = (i + 1) * gridCols + j; // D: верхний левый угол
-        const indexC = indexD + 1; // C: верхний правый угол
-
-        // Извлекаем координаты вершин
-        const A = new THREE.Vector3().fromBufferAttribute(posAttr, indexA);
-        const B = new THREE.Vector3().fromBufferAttribute(posAttr, indexB);
-        const C = new THREE.Vector3().fromBufferAttribute(posAttr, indexC);
-        const D = new THREE.Vector3().fromBufferAttribute(posAttr, indexD);
-
-        console.log(
-          `[A, B, C, D] = [ [${A.toArray()}], [${B.toArray()}], [${C.toArray()}], [${D.toArray()}]] ]`
+        // Создаем конус с 4 радиальными сегментами и thetaStart = π/4,
+        // чтобы его базовые вершины совпали с углами квадратной ячейки.
+        const coneGeometry = new THREE.ConeGeometry(
+          coneRadius,
+          coneHeight,
+          4, // 4 сегмента (квадратное основание)
+          1, // один сегмент по высоте
+          false, // не открыт
+          Math.PI / 4 // смещение угла, чтобы основание было ориентировано как квадрат, выровненный с осями
         );
-
-        const geometry = new THREE.PlaneGeometry(100, 100);
-        this.geometry.rotateX(Math.PI / 2);
-        const material = new THREE.MeshBasicMaterial({
-          color: 0xffff00,
-          side: THREE.DoubleSide,
-        });
-        const plane = new THREE.Mesh(geometry, material);
-        this.holderObjects.add(plane);
-
-        // Вычисляем центр основания ячейки
-        const center = new THREE.Vector3()
-          .add(A)
-          .add(B)
-          .add(C)
-          .add(D)
-          .multiplyScalar(0.25);
-
-        // Апекс пирамиды — центр плюс смещение по оси Z (т.к. после поворота плоскость лежит в XY)
-        const apex = center.clone();
-        apex.z += pyramidHeight;
-
-        // Формируем массив вершин для пирамидальной геометрии:
-        // Первые 4 вершины — основание (A, B, C, D), пятая — апекс.
-        const vertices = new Float32Array([
-          A.x,
-          A.y,
-          A.z, // 0: A
-          B.x,
-          B.y,
-          B.z, // 1: B
-          C.x,
-          C.y,
-          C.z, // 2: C
-          D.x,
-          D.y,
-          D.z, // 3: D
-          apex.x,
-          apex.y,
-          apex.z, // 4: Апекс
-        ]);
-
-        // Задаем индексы для граней:
-        // Основание (два треугольника): [A, B, C] и [A, C, D]
-        // Боковые грани (4 треугольника): [A, B, Апекс], [B, C, Апекс], [C, D, Апекс], [D, A, Апекс]
-        const indices = [
-          // Основание
-          0, 1, 2, 0, 2, 3,
-          // Боковые грани
-          0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4,
-        ];
-
-        // Создаем BufferGeometry для пирамиды
-        const pyramidGeo = new THREE.BufferGeometry();
-        pyramidGeo.setAttribute(
-          'position',
-          new THREE.BufferAttribute(vertices, 3)
-        );
-        pyramidGeo.setIndex(indices);
-        pyramidGeo.computeVertexNormals();
-
-        // Для наглядности можно задать отдельный материал (например, MeshBasicMaterial)
-        const pyramidMat = new THREE.MeshBasicMaterial({
+        const coneMaterial = new THREE.MeshBasicMaterial({
           color: 0xff0000,
-          side: THREE.DoubleSide,
-          wireframe: false,
+          wireframe: true,
         });
+        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
 
-        // Создаем меш пирамиды и добавляем его в контейнер (например, в holderObjects)
-        const pyramidMesh = new THREE.Mesh(pyramidGeo, pyramidMat);
-        this.holderObjects.add(pyramidMesh);
+        // По умолчанию ConeGeometry ориентирован вдоль оси Y (база на y=0, апекс на y=height).
+        // Нам нужно, чтобы основание лежало в плоскости XY.
+        // Для этого поворачиваем конус вокруг оси X на -90°.
+        cone.rotation.x = -Math.PI / 2;
+
+        // Позиционируем конус так, чтобы его основание (центр) совпадало с центром ячейки.
+        cone.position.set(centerX, centerY, 0);
+
+        // Добавляем конус в контейнер.
+        this.holderObjects.add(cone);
       }
     }
   }
 
   update() {
-    // Обновления, если необходимы, например, анимация шейдера
+    // Здесь можно обновлять uniforms или анимировать объект (например, вращать сцену)
     // this.material.uniforms.time.value = this.time;
   }
 
   destroyMesh() {
     if (this.pointsMesh) {
       this.holderObjects.remove(this.pointsMesh);
-      // Очистка геометрии и материала, если требуется
+      // Очистка геометрии и материала при необходимости:
       // this.pointsMesh.geometry?.dispose();
       // this.pointsMesh.material?.dispose();
       // this.pointsMesh = null;
