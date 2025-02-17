@@ -18,8 +18,8 @@ export default class ReactiveParticles extends THREE.Object3D {
   pointsMesh: THREE.Object3D<THREE.Object3DEventMap>;
 
   // Параметры сетки
-  widthSeg: number = 32;
-  depthSeg: number = 32;
+  widthSeg: number = 4;
+  depthSeg: number = 4;
 
   constructor(mainHolder: THREE.Object3D) {
     super();

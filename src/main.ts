@@ -61,9 +61,10 @@ export default class App {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.addEventListener('change', () =>
-      this.ptRenderer.updateCamera()
-    );
+    this.controls.addEventListener('change', () => {
+      console.log('change');
+      this.ptRenderer.updateCamera();
+    });
 
     // Создаем экземпляр path tracing рендера.
     // Параметры (scene, camera, renderer) могут отличаться в зависимости от библиотеки.
