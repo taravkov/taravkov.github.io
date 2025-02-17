@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import vertex from './glsl/vertex.glsl';
 import fragment from './glsl/fragment.glsl';
 import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
+import createBoxMesh from './BoxMesh'; // Импортируем вынесенный код для сетки
 
 export default class ReactiveParticles extends THREE.Object3D {
   time: number;
@@ -11,10 +12,10 @@ export default class ReactiveParticles extends THREE.Object3D {
     autoMix: boolean;
     autoRotate: boolean;
   };
-  holderObjects: THREE.Object3D<THREE.Object3DEventMap> = null!;
-  material: THREE.ShaderMaterial = null!;
-  geometry: THREE.BoxGeometry = null!;
-  pointsMesh: THREE.Object3D<THREE.Object3DEventMap> = null!;
+  holderObjects: THREE.Object3D<THREE.Object3DEventMap>;
+  material: THREE.ShaderMaterial;
+  // Теперь box-сетка хранится как отдельный объект
+  pointsMesh: THREE.Object3D<THREE.Object3DEventMap>;
 
   // Параметры сетки
   widthSeg: number = 32;
@@ -30,9 +31,13 @@ export default class ReactiveParticles extends THREE.Object3D {
       autoMix: true,
       autoRotate: true,
     };
+
+    this.holderObjects = new THREE.Object3D();
+    this.add(this.holderObjects);
+
     this.init(mainHolder);
     this.destroyMesh();
-    this.createBoxMesh();
+    this.createBoxMesh(); // теперь создание box-сетки происходит через импортированную функцию
     // Создаем канопеи по двум схемам и отмечаем маркеры
     this.createCanopiesFromGrid();
     this.markEdgeAndCornerMarkers();
@@ -41,8 +46,6 @@ export default class ReactiveParticles extends THREE.Object3D {
 
   init(mainHolder: THREE.Object3D) {
     mainHolder.add(this);
-    this.holderObjects = new THREE.Object3D();
-    this.add(this.holderObjects);
 
     // Шейдерный материал для точек (сетка)
     this.material = new THREE.ShaderMaterial({
@@ -65,26 +68,13 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   createBoxMesh() {
-    const widthSeg = Math.floor(this.widthSeg);
-    const depthSeg = Math.floor(this.depthSeg);
-    // Создаем плоскую сетку BoxGeometry размером 4096 x 4096.
-    this.geometry = new THREE.BoxGeometry(
-      4096,
-      0,
-      4096,
-      widthSeg,
-      undefined,
-      depthSeg
+    // Используем вынесенную функцию, чтобы создать box-сетку
+    this.pointsMesh = createBoxMesh(
+      this.widthSeg,
+      this.depthSeg,
+      this.material
     );
-    this.material.uniforms.offsetSize.value = THREE.MathUtils.randInt(30, 60);
-    this.material.needsUpdate = true;
-
-    this.pointsMesh = new THREE.Object3D();
-    this.pointsMesh.rotateX(Math.PI / 2);
     this.holderObjects.add(this.pointsMesh);
-
-    const pointsMesh = new THREE.Points(this.geometry, this.material);
-    this.pointsMesh.add(pointsMesh);
   }
 
   /**
@@ -200,8 +190,8 @@ export default class ReactiveParticles extends THREE.Object3D {
     const markerMaterialCorner = new THREE.MeshBasicMaterial({
       color: 0xff0000,
     });
-    const edgeRadius = 2; // уменьшаем размер
-    const cornerRadius = 1; // еще меньше
+    const edgeRadius = 2;
+    const cornerRadius = 1;
 
     this.holderObjects.children.forEach((child) => {
       if (
