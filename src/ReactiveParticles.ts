@@ -36,16 +36,6 @@ export default class ReactiveParticles extends THREE.Object3D {
     this.add(this.holderObjects);
 
     this.init(mainHolder);
-    this.destroyMesh();
-    this.createBoxMesh(); // теперь создание box-сетки происходит через импортированную функцию
-    // Создаем канопеи по двум схемам и отмечаем маркеры
-    this.createCanopiesFromGrid();
-    this.markEdgeAndCornerMarkers();
-    this.properties.autoMix = false;
-  }
-
-  init(mainHolder: THREE.Object3D) {
-    mainHolder.add(this);
 
     // Шейдерный материал для точек (сетка)
     this.material = new THREE.ShaderMaterial({
@@ -65,16 +55,23 @@ export default class ReactiveParticles extends THREE.Object3D {
         endColor: { value: new THREE.Color(this.properties.endColor) },
       },
     });
-  }
 
-  createBoxMesh() {
-    // Используем вынесенную функцию, чтобы создать box-сетку
+    this.destroyMesh();
+    // Используем вынесенную функцию для создания box-сетки
     this.pointsMesh = createBoxMesh(
       this.widthSeg,
       this.depthSeg,
       this.material
     );
     this.holderObjects.add(this.pointsMesh);
+    // Создаем канопеи по двум схемам и отмечаем маркеры
+    this.createCanopiesFromGrid();
+    this.markEdgeAndCornerMarkers();
+    this.properties.autoMix = false;
+  }
+
+  init(mainHolder: THREE.Object3D) {
+    mainHolder.add(this);
   }
 
   /**
@@ -245,43 +242,10 @@ export default class ReactiveParticles extends THREE.Object3D {
   }
 
   update() {
-    // Анимация "плавающих" вершин для основных канопей
-    this.time += 0.01;
-    const factor = 0.5 * (Math.sin(this.time) + 1);
-    for (let i = 0; i < this.holderObjects.children.length; i++) {
-      const child = this.holderObjects.children[i];
-      if (child.type === 'Mesh' && child.userData && child.userData.type) {
-        const mesh = child as THREE.Mesh;
-        // Пропускаем маркеры (у них userData.type не задан)
-        if (!mesh.userData.type) continue;
-        const geo = mesh.geometry as THREE.BufferGeometry;
-        const posAttr = geo.attributes.position;
-        const uvAttr = geo.attributes.uv;
-        const count = posAttr.count;
-        const { type, upwardHeight, downwardDepth } = mesh.userData;
-        for (let j = 0; j < count; j++) {
-          const u = uvAttr.getX(j);
-          const v = uvAttr.getY(j);
-          const base = 4 * u * (1 - u) * v * (1 - v);
-          let targetZ;
-          if (type === 'upward') {
-            targetZ = THREE.MathUtils.lerp(
-              upwardHeight * base,
-              -downwardDepth * base,
-              factor
-            );
-          } else {
-            targetZ = THREE.MathUtils.lerp(
-              -downwardDepth * base,
-              upwardHeight * base,
-              factor
-            );
-          }
-          posAttr.setZ(j, targetZ);
-        }
-        posAttr.needsUpdate = true;
-      }
-    }
+    // Убираем изменение геометрии, чтобы path tracing не нарушался.
+    // Uniform time можно оставлять неизменным или обновлять, если шейдер использует его для негеометрической анимации.
+    // Здесь оставляем его без изменений:
+    this.material.uniforms.time.value = this.time;
   }
 
   destroyMesh() {
