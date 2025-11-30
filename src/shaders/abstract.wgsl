@@ -194,6 +194,14 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     // Blend RAZAKA layer more subtly
     col = mix(col, razakaElements.rgb, razakaElements.a * 0.35);
     
+    // === LAYER 4: Flames (psychedelic checkered ground + rising flames) ===
+    let flamesElements = flamesLayer(p, t);
+    
+    // Soft blend with transition mask
+    let flameTransition = smoothstep(0.0, 0.3, flamesElements.a) * 
+                          smoothstep(1.0, 0.7, flamesElements.a);
+    col = mix(col, flamesElements.rgb, flameTransition * 0.25);
+    
     // Heavy grain texture (like reference)
     let grain1 = hash(uv * 1500.0 + vec2f(t * 0.1)) * 0.25;
     let grain2 = hash(uv * 800.0 - vec2f(t * 0.05)) * 0.15;

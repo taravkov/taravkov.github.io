@@ -4,6 +4,7 @@ import { AmbientAudio } from './audio.js';
 // Import abstract shader
 import commonWGSL from './shaders/components/common.wgsl?raw';
 import razakaWGSL from './shaders/components/razaka.wgsl?raw';
+import flamesWGSL from './shaders/components/flames.wgsl?raw';
 import abstractWGSL from './shaders/abstract.wgsl?raw';
 
 const renderer = new WebGPURenderer();
@@ -13,10 +14,11 @@ async function init() {
     try {
         await renderer.init();
         
-        // Stitch shaders (common utils + razaka layer + abstract)
+        // Stitch shaders (common utils + razaka layer + flames layer + abstract)
         const shaderCode = [
             commonWGSL,
             razakaWGSL,
+            flamesWGSL,
             abstractWGSL
         ].join('\n\n');
         
