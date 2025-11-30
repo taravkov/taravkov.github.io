@@ -177,22 +177,6 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
         col = mix(col, blobCol3, smoothstep(0.02, -0.02, blob3));
     }
     
-    // Curved lines
-    let line1 = sdBezier(p, vec2f(-1.2, 0.9), vec2f(-0.5, 0.7), vec2f(0.2, 0.3));
-    if (line1 < 0.01) {
-        col = mix(col, vec3f(0.95, 0.85, 0.3), smoothstep(0.01, 0.005, line1));
-    }
-    
-    let line2 = sdBezier(p, vec2f(-0.6, -0.2), vec2f(0.0, 0.4), vec2f(0.8, 0.1));
-    if (line2 < 0.008) {
-        col = mix(col, vec3f(0.9, 0.8, 0.25), smoothstep(0.008, 0.004, line2));
-    }
-    
-    let line3 = sdBezier(p, vec2f(-0.3, -0.6), vec2f(0.1, -0.4), vec2f(0.6, -0.5));
-    if (line3 < 0.006) {
-        col = mix(col, vec3f(0.85, 0.75, 0.2), smoothstep(0.006, 0.003, line3));
-    }
-    
     // Wavy ribbon
     let wave = sdWave(p, 0.75, 0.08, 8.0);
     if (wave < 0.05) {
