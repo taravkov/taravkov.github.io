@@ -177,17 +177,17 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
         col = mix(col, waveCol, smoothstep(0.05, 0.02, wave));
     }
     
-    // === LAYER 2: Liquid distortion (stronger overlay) ===
+    // === LAYER 2: Liquid distortion (BOOSTED for more presence) ===
     let liquidLayer = liquidFlowLayer(p * 0.5, t * 0.5);
     
-    // Mix with alpha blending (stronger presence)
-    col = mix(col, liquidLayer.rgb, liquidLayer.a * 1.2);
+    // Mix with stronger alpha blending
+    col = mix(col, liquidLayer.rgb, liquidLayer.a * 1.8);
     
-    // === LAYER 3: RAZAKA elements (from reference) ===
+    // === LAYER 3: RAZAKA elements (from reference, subtle overlay) ===
     let razakaElements = razakaLayer(p, t);
     
-    // Blend RAZAKA layer on top
-    col = mix(col, razakaElements.rgb, razakaElements.a * 0.65);
+    // Blend RAZAKA layer more subtly
+    col = mix(col, razakaElements.rgb, razakaElements.a * 0.35);
     
     // Heavy grain texture (like reference)
     let grain1 = hash(uv * 1500.0 + vec2f(t * 0.1)) * 0.25;
