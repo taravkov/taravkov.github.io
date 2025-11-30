@@ -6,12 +6,34 @@ fn sdBox2D(p: vec2f, b: vec2f) -> f32 {
     return length(max(d, vec2f(0.0))) + min(max(d.x, d.y), 0.0);
 }
 
-fn sdRibbon(p: vec2f, start: vec2f, end: vec2f, width: f32, curve: f32) -> f32 {
+fn sdRibbon(p: vec2f, start: vec2f, end: vec2f, width: f32, curve: f32, time: f32, seed: f32) -> f32 {
     let pa = p - start;
     let ba = end - start;
     let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    let offset = sin(h * 3.14159 * curve) * width * 0.3;
-    return length(pa - ba * h + vec2f(offset, 0.0)) - width;
+    
+    // Multiple sine waves for organic flow
+    let flow1 = sin(h * 3.14159 * curve + time * 0.8 + seed) * width * 0.35;
+    let flow2 = sin(h * 6.28 * (curve + 0.5) - time * 0.6 + seed * 1.5) * width * 0.2;
+    let flow3 = cos(h * 9.42 * curve + time * 0.4 + seed * 2.0) * width * 0.15;
+    
+    // Organic width variation along the ribbon
+    let widthMod = 1.0 + sin(h * 12.56 + time * 0.5 + seed) * 0.25 + 
+                         cos(h * 18.84 - time * 0.35 + seed * 1.2) * 0.15;
+    
+    // Combine flows for complex undulation
+    let offset = vec2f(
+        flow1 + flow2 * 0.7,
+        flow3 * 0.8
+    );
+    
+    // Distance with organic bulges
+    let baseDist = length(pa - ba * h + offset) - (width * widthMod);
+    
+    // Add noise-based turbulence
+    let noisePos = p * 8.0 + vec2f(time * 0.1);
+    let turbulence = fbm(noisePos) * width * 0.12;
+    
+    return baseDist + turbulence;
 }
 
 fn rotate2D(p: vec2f, angle: f32) -> vec2f {
@@ -24,48 +46,112 @@ fn razakaLayer(p: vec2f, time: f32) -> vec4f {
     var col = vec3f(0.0);
     var alpha = 0.0;
     
-    // Ribbons with evolving colors
-    let ribbon1 = sdRibbon(p, vec2f(-0.5, 1.0), vec2f(0.3, 0.2), 0.12, 2.0);
+    // Ribbons with organic flowing shapes and evolving colors
+    let ribbon1 = sdRibbon(p, vec2f(-0.5, 1.0), vec2f(0.3, 0.2), 0.12, 2.0, time, 1.0);
     if (ribbon1 < 0.0) {
         let depth = smoothstep(0.0, -0.1, ribbon1);
         let ribbonCol = mix(getPalette(time, 4.0), getPalette(time, 4.1), depth);
-        col = mix(col, ribbonCol, 0.9);
+        
+        // Add internal gradient based on position along ribbon
+        let gradientNoise = fbm(p * 5.0 + time * 0.08);
+        let ribbonColFinal = mix(ribbonCol, getPalette(time, 4.15), gradientNoise * 0.4);
+        
+        col = mix(col, ribbonColFinal, 0.9);
         alpha = max(alpha, 0.9);
+        
+        // Subtle glow on edges
+        let edgeGlow = exp(-ribbon1 * ribbon1 * 50.0);
+        col += ribbonColFinal * edgeGlow * 0.3;
     }
     
-    let ribbon2 = sdRibbon(p, vec2f(-0.8, 0.4), vec2f(0.6, -0.3), 0.1, 1.5);
+    let ribbon2 = sdRibbon(p, vec2f(-0.8, 0.4), vec2f(0.6, -0.3), 0.1, 1.5, time, 2.5);
     if (ribbon2 < 0.0) {
         let depth = smoothstep(0.0, -0.08, ribbon2);
         let ribbonCol = mix(getPalette(time, 4.3), getPalette(time, 4.4), depth);
-        col = mix(col, ribbonCol, 0.85);
+        
+        let gradientNoise = fbm(p * 6.0 - time * 0.06);
+        let ribbonColFinal = mix(ribbonCol, getPalette(time, 4.45), gradientNoise * 0.35);
+        
+        col = mix(col, ribbonColFinal, 0.85);
         alpha = max(alpha, 0.85);
+        
+        let edgeGlow = exp(-ribbon2 * ribbon2 * 60.0);
+        col += ribbonColFinal * edgeGlow * 0.25;
     }
     
-    let ribbon3 = sdRibbon(p, vec2f(0.2, 0.9), vec2f(-0.4, -0.2), 0.09, 1.8);
+    let ribbon3 = sdRibbon(p, vec2f(0.2, 0.9), vec2f(-0.4, -0.2), 0.09, 1.8, time, 4.0);
     if (ribbon3 < 0.0) {
         let depth = smoothstep(0.0, -0.07, ribbon3);
         let ribbonCol = mix(getPalette(time, 4.6), getPalette(time, 4.7), depth);
-        col = mix(col, ribbonCol, 0.88);
+        
+        let gradientNoise = fbm(p * 7.0 + time * 0.07);
+        let ribbonColFinal = mix(ribbonCol, getPalette(time, 4.75), gradientNoise * 0.38);
+        
+        col = mix(col, ribbonColFinal, 0.88);
         alpha = max(alpha, 0.88);
+        
+        let edgeGlow = exp(-ribbon3 * ribbon3 * 70.0);
+        col += ribbonColFinal * edgeGlow * 0.28;
     }
     
-    // Geometric shapes with evolving colors
-    let tealCenter1 = vec2f(0.7, 0.8);
-    let tealRotated1 = rotate2D(p - tealCenter1, 0.6);
-    let teal1 = sdBox2D(tealRotated1, vec2f(0.2, 0.06));
+    // Geometric shapes with organic distortion and evolving colors
+    let tealCenter1 = vec2f(0.7, 0.8) + vec2f(sin(time * 0.6) * 0.02, cos(time * 0.5) * 0.015);
+    let tealRotated1 = rotate2D(p - tealCenter1, 0.6 + sin(time * 0.3) * 0.1);
     
-    if (teal1 < 0.0) {
-        col = mix(col, getPalette(time, 5.0), 0.95);
+    // Add organic warping to the rectangle
+    let warpedP1 = tealRotated1 + vec2f(
+        sin(tealRotated1.y * 10.0 + time * 0.8) * 0.015,
+        cos(tealRotated1.x * 8.0 - time * 0.6) * 0.012
+    );
+    
+    let teal1 = sdBox2D(warpedP1, vec2f(0.2, 0.06));
+    
+    // Add noise-based distortion
+    let noise1 = fbm(tealRotated1 * 12.0 + time * 0.05);
+    let teal1Final = teal1 + noise1 * 0.008;
+    
+    if (teal1Final < 0.0) {
+        let depth = smoothstep(0.0, -0.04, teal1Final);
+        let shapeCol = mix(getPalette(time, 5.0), getPalette(time, 5.05), depth);
+        
+        // Internal texture
+        let internalNoise = fbm(tealRotated1 * 20.0);
+        let finalCol = mix(shapeCol, getPalette(time, 5.1), internalNoise * 0.2);
+        
+        col = mix(col, finalCol, 0.95);
         alpha = max(alpha, 0.95);
+        
+        // Soft glow on edges
+        let edgeGlow = exp(-teal1Final * teal1Final * 100.0);
+        col += finalCol * edgeGlow * 0.2;
     }
     
-    let tealCenter2 = vec2f(0.8, 0.5);
-    let tealRotated2 = rotate2D(p - tealCenter2, -0.3);
-    let teal2 = sdBox2D(tealRotated2, vec2f(0.15, 0.08));
+    let tealCenter2 = vec2f(0.8, 0.5) + vec2f(cos(time * 0.7) * 0.018, sin(time * 0.55) * 0.02);
+    let tealRotated2 = rotate2D(p - tealCenter2, -0.3 + cos(time * 0.4) * 0.08);
     
-    if (teal2 < 0.0) {
-        col = mix(col, getPalette(time, 5.2), 0.92);
+    // Organic warping
+    let warpedP2 = tealRotated2 + vec2f(
+        cos(tealRotated2.y * 12.0 - time * 0.7) * 0.012,
+        sin(tealRotated2.x * 10.0 + time * 0.5) * 0.01
+    );
+    
+    let teal2 = sdBox2D(warpedP2, vec2f(0.15, 0.08));
+    
+    let noise2 = fbm(tealRotated2 * 15.0 - time * 0.04);
+    let teal2Final = teal2 + noise2 * 0.007;
+    
+    if (teal2Final < 0.0) {
+        let depth = smoothstep(0.0, -0.035, teal2Final);
+        let shapeCol = mix(getPalette(time, 5.2), getPalette(time, 5.25), depth);
+        
+        let internalNoise = fbm(tealRotated2 * 18.0);
+        let finalCol = mix(shapeCol, getPalette(time, 5.3), internalNoise * 0.18);
+        
+        col = mix(col, finalCol, 0.92);
         alpha = max(alpha, 0.92);
+        
+        let edgeGlow = exp(-teal2Final * teal2Final * 120.0);
+        col += finalCol * edgeGlow * 0.18;
     }
     
     // Glowing spheres with evolving colors
@@ -99,7 +185,8 @@ fn razakaLayer(p: vec2f, time: f32) -> vec4f {
     col = mix(col, sphereCol3, sphere3Core);
     alpha = max(alpha, sphere3Core + sphere3Glow * 0.28);
     
-    // Portal/window with glowing oval
+    // Portal/window with glowing oval - DISABLED (too much attention)
+    /*
     let portalFrame = sdBox2D(p - vec2f(0.5, -0.5), vec2f(0.35, 0.5));
     let portalBorder = abs(portalFrame) - 0.015;
     
@@ -120,6 +207,7 @@ fn razakaLayer(p: vec2f, time: f32) -> vec4f {
         col = mix(col, ovalCol * 1.3, ovalCore);
         alpha = max(alpha, ovalCore + ovalGlow * 0.5);
     }
+    */
     
     // Organic lines with evolving colors (darker tones)
     let wavyLine1 = sdBezier(p, vec2f(-0.9, 0.9), vec2f(-0.3, 0.6), vec2f(0.4, 0.8));
