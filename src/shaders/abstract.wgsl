@@ -118,25 +118,18 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     var p = (uv - 0.5) * 2.0;
     p.x *= aspectRatio;
     
-    // === BASE LAYER: Original Kandinsky/Miro composition ===
+    // === BASE LAYER: Pink/Purple textured background (RAZAKA style) ===
     
-    let bgNoise = fbm(uv * 8.0 + vec2f(t * 0.1));
-    let bgCol = mix(vec3f(0.15, 0.45, 0.4), vec3f(0.2, 0.55, 0.45), bgNoise);
+    let bgNoise = fbm(uv * 12.0 + vec2f(t * 0.05));
+    let bgCol = mix(vec3f(0.75, 0.55, 0.7), vec3f(0.85, 0.65, 0.8), bgNoise);
     
     var col = bgCol;
     
-    // Ground (with softer transition)
-    let groundTransition = smoothstep(-0.2, -0.4, p.y); // Softer edge
-    if (groundTransition > 0.0) {
-        let groundNoise = fbm(uv * 12.0);
-        let groundBase = mix(
-            vec3f(0.95, 0.7, 0.3),
-            vec3f(0.9, 0.4, 0.6),
-            noise(uv * 6.0)
-        );
-        let groundCol = mix(groundBase, vec3f(0.95, 0.5, 0.7), groundNoise * 0.5);
-        col = mix(col, groundCol, groundTransition);
-    }
+    // Teal/grey gradient zones (like reference)
+    let zoneNoise = fbm(uv * 6.0);
+    let tealZone = smoothstep(0.3, 0.7, p.y + zoneNoise * 0.3);
+    let tealCol = mix(vec3f(0.5, 0.6, 0.65), vec3f(0.6, 0.65, 0.7), bgNoise);
+    col = mix(col, tealCol, tealZone * 0.5);
     
     // Blobs
     let blob1Center = vec2f(-0.8, 0.6) + vec2f(sin(t * 0.5) * 0.1, cos(t * 0.7) * 0.05);
@@ -190,9 +183,17 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     // Mix with alpha blending (stronger presence)
     col = mix(col, liquidLayer.rgb, liquidLayer.a * 1.2);
     
-    // Texture grain
-    let grain = hash(uv * 1000.0 + vec2f(t)) * 0.15;
-    col += grain - 0.075;
+    // === LAYER 3: RAZAKA elements (from reference) ===
+    let razakaElements = razakaLayer(p, t);
+    
+    // Blend RAZAKA layer on top
+    col = mix(col, razakaElements.rgb, razakaElements.a * 0.65);
+    
+    // Heavy grain texture (like reference)
+    let grain1 = hash(uv * 1500.0 + vec2f(t * 0.1)) * 0.25;
+    let grain2 = hash(uv * 800.0 - vec2f(t * 0.05)) * 0.15;
+    let grain = (grain1 + grain2) * 0.5;
+    col += grain - 0.2;
     
     // Vignette
     let vignette = 1.0 - length(p) * 0.2;

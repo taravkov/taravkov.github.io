@@ -2,6 +2,7 @@ import { WebGPURenderer } from './webgpu.js';
 
 // Import abstract shader
 import commonWGSL from './shaders/components/common.wgsl?raw';
+import razakaWGSL from './shaders/components/razaka.wgsl?raw';
 import abstractWGSL from './shaders/abstract.wgsl?raw';
 
 const renderer = new WebGPURenderer();
@@ -10,9 +11,10 @@ async function init() {
     try {
         await renderer.init();
         
-        // Stitch shaders (only need common utils + abstract)
+        // Stitch shaders (common utils + razaka layer + abstract)
         const shaderCode = [
             commonWGSL,
+            razakaWGSL,
             abstractWGSL
         ].join('\n\n');
         
