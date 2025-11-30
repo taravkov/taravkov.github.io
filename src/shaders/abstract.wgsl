@@ -95,14 +95,15 @@ fn liquidFlowLayer(p: vec2f, time: f32) -> vec4f {
     
     let yellowRegion = smoothstep(0.6, 0.9, combined);
     
-    let pink = vec3f(0.98, 0.3, 0.7);
-    let yellow = vec3f(1.0, 0.85, 0.1);
-    let brown = vec3f(0.6, 0.3, 0.1);
+    // Evolving liquid colors
+    let liquidCol1 = getPalette(time, 3.0);
+    let liquidCol2 = getPalette(time, 3.3);
+    let liquidCol3 = getPalette(time, 3.6);
     
-    var col = mix(pink, yellow, yellowRegion);
+    var col = mix(liquidCol1, liquidCol2, yellowRegion);
     
     let transitionMask = smoothstep(0.45, 0.55, combined) * (1.0 - smoothstep(0.55, 0.65, combined));
-    col = mix(col, brown, transitionMask * 0.6);
+    col = mix(col, liquidCol3, transitionMask * 0.6);
     
     // Return with alpha for blending control
     let alpha = smoothstep(0.2, 0.8, combined) * 0.75; // 75% max opacity
@@ -118,18 +119,22 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     var p = (uv - 0.5) * 2.0;
     p.x *= aspectRatio;
     
-    // === BASE LAYER: Pink/Purple textured background (RAZAKA style) ===
+    // === BASE LAYER: Evolving psychedelic background ===
     
     let bgNoise = fbm(uv * 12.0 + vec2f(t * 0.05));
-    let bgCol = mix(vec3f(0.75, 0.55, 0.7), vec3f(0.85, 0.65, 0.8), bgNoise);
+    let bgCol1 = getPalette(t, 0.0); // First color
+    let bgCol2 = getPalette(t, 0.3); // Second color
+    let bgCol = mix(bgCol1, bgCol2, bgNoise);
     
     var col = bgCol;
     
-    // Teal/grey gradient zones (like reference)
+    // Gradient zones with evolving colors
     let zoneNoise = fbm(uv * 6.0);
-    let tealZone = smoothstep(0.3, 0.7, p.y + zoneNoise * 0.3);
-    let tealCol = mix(vec3f(0.5, 0.6, 0.65), vec3f(0.6, 0.65, 0.7), bgNoise);
-    col = mix(col, tealCol, tealZone * 0.5);
+    let zoneBlend = smoothstep(0.3, 0.7, p.y + zoneNoise * 0.3);
+    let zoneCol1 = getPalette(t, 0.6);
+    let zoneCol2 = getPalette(t, 0.9);
+    let zoneCol = mix(zoneCol1, zoneCol2, bgNoise);
+    col = mix(col, zoneCol, zoneBlend * 0.5);
     
     // Blobs
     let blob1Center = vec2f(-0.8, 0.6) + vec2f(sin(t * 0.5) * 0.1, cos(t * 0.7) * 0.05);
@@ -137,8 +142,8 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     
     if (blob1 < 0.0) {
         let blobCol1 = mix(
-            vec3f(1.0, 0.8, 0.3),
-            vec3f(1.0, 0.5, 0.6),
+            getPalette(t, 1.0),
+            getPalette(t, 1.2),
             noise(uv * 10.0)
         );
         let glow1 = exp(-blob1 * blob1 * 20.0);
@@ -151,8 +156,8 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     
     if (blob2 < 0.0) {
         let blobCol2 = mix(
-            vec3f(0.95, 0.4, 0.7),
-            vec3f(0.3, 0.7, 0.5),
+            getPalette(t, 1.5),
+            getPalette(t, 1.7),
             fbm(uv * 15.0)
         );
         col = mix(col, blobCol2, smoothstep(0.02, -0.02, blob2));
@@ -163,8 +168,8 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     
     if (blob3 < 0.0) {
         let blobCol3 = mix(
-            vec3f(1.0, 0.6, 0.4),
-            vec3f(0.95, 0.8, 0.3),
+            getPalette(t, 2.0),
+            getPalette(t, 2.2),
             noise(uv * 12.0)
         );
         col = mix(col, blobCol3, smoothstep(0.02, -0.02, blob3));
@@ -173,7 +178,7 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     // Wavy ribbon
     let wave = sdWave(p, 0.75, 0.08, 8.0);
     if (wave < 0.05) {
-        let waveCol = vec3f(0.95, 0.5, 0.65);
+        let waveCol = getPalette(t, 2.5);
         col = mix(col, waveCol, smoothstep(0.05, 0.02, wave));
     }
     
