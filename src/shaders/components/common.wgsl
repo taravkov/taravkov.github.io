@@ -100,25 +100,35 @@ fn opSubtraction(d1: f32, d2: f32) -> f32 {
 
 // --- Color Palette Generation ---
 
+// Smooth interpolation function (quintic for very smooth transitions)
+fn smootherStep(t: f32) -> f32 {
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
 // Generate smooth evolving color based on time (no green/yellow)
 fn evolvingColor(baseHue: f32, time: f32, seed: f32) -> vec3f {
     // Map to pink/purple/blue/red range, avoiding green (0.15-0.5) and yellow (0.1-0.15)
     // Use ranges: 0.5-1.0 (purple to pink/red) and 0.0-0.1 (red)
-    let rawHue = fract(baseHue + sin(time * 0.15 + seed) * 0.2);
     
-    // Remap: 0.0-0.5 -> 0.55-1.0 (purple/blue to pink/red)
-    //        0.5-1.0 -> 0.0-0.1 (red to orange-red)
-    let hue = select(
-        0.55 + rawHue * 0.9,  // 0.0-0.5 -> purple/blue/pink range
-        rawHue * 0.2 - 0.1,   // 0.5-1.0 -> deep red range
-        rawHue > 0.5
-    );
+    // Much slower, smoother modulation
+    let slowTime = time * 0.08;
+    let rawHue = fract(baseHue + sin(slowTime + seed) * 0.15 + cos(slowTime * 0.7 + seed * 1.3) * 0.1);
     
-    let sat = 0.5 + sin(time * 0.1 + seed * 1.5) * 0.3; // 0.2 - 0.8
-    let val = 0.6 + sin(time * 0.12 + seed * 2.0) * 0.25; // 0.35 - 0.85
+    // Smooth blend between color zones to avoid harsh transitions
+    let zoneFactor = smootherStep(fract(rawHue));
+    
+    // Remap with smooth interpolation
+    let hue1 = 0.55 + zoneFactor * 0.9;  // Purple/blue/pink range
+    let hue2 = zoneFactor * 0.2 - 0.1;   // Deep red range
+    
+    let hue = mix(hue1, hue2, smootherStep(smoothstep(0.4, 0.6, rawHue)));
+    
+    // Slower, smoother sat/val changes
+    let sat = 0.5 + sin(slowTime * 0.6 + seed * 1.5) * 0.2 + cos(slowTime * 0.4 + seed * 2.0) * 0.1;
+    let val = 0.6 + sin(slowTime * 0.5 + seed * 2.0) * 0.15 + cos(slowTime * 0.3 + seed * 1.2) * 0.1;
     
     // HSV to RGB
-    let c = vec3f(hue, sat, val);
+    let c = vec3f(hue, clamp(sat, 0.3, 0.8), clamp(val, 0.4, 0.8));
     let k = vec3f(1.0, 2.0 / 3.0, 1.0 / 3.0);
     let p = abs(fract3(vec3f(c.x) + k) * 6.0 - vec3f(3.0));
     return c.z * mix(vec3f(1.0), clamp(p - vec3f(1.0), vec3f(0.0), vec3f(1.0)), c.y);
@@ -126,7 +136,7 @@ fn evolvingColor(baseHue: f32, time: f32, seed: f32) -> vec3f {
 
 // Get palette for specific layer
 fn getPalette(time: f32, layerId: f32) -> vec3f {
-    // Slow cycling through color space
-    let baseHue = fract(time * 0.05 + layerId * 0.3);
+    // Very slow cycling through color space with layer offset
+    let baseHue = fract(time * 0.03 + layerId * 0.25);
     return evolvingColor(baseHue, time, layerId);
 }

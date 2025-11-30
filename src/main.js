@@ -27,6 +27,8 @@ async function init() {
         // Initialize audio
         await audio.init();
         
+        // Audio controls disabled until sound design is ready
+        /*
         // UI elements
         const startPrompt = document.getElementById('start-prompt');
         const startButton = document.getElementById('start-audio');
@@ -65,6 +67,7 @@ async function init() {
                 audioPlaying = true;
             }
         });
+        */
         
         animate();
     } catch (e) {
