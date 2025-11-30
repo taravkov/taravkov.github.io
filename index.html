@@ -8,10 +8,89 @@
     <style>
       body { margin: 0; overflow: hidden; background-color: #000; }
       canvas { display: block; }
+      
+      #audio-controls {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+      }
+      
+      #audio-controls button {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 24px;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      #audio-controls button:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.1);
+      }
+      
+      #audio-controls button:active {
+        transform: scale(0.95);
+      }
+      
+      #start-prompt {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+      }
+      
+      #start-prompt button {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 24px;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      #start-prompt button:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.1);
+      }
+      
+      #start-prompt button:active {
+        transform: scale(0.95);
+      }
+      
+      .hidden {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    
+    <div id="start-prompt">
+      <button id="start-audio">▶️</button>
+    </div>
+    
+    <div id="audio-controls" class="hidden">
+      <button id="toggle-audio">⏸️</button>
+    </div>
+    
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
