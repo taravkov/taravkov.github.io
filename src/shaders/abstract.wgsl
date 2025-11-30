@@ -61,83 +61,6 @@ fn sdWave(p: vec2f, y: f32, amplitude: f32, frequency: f32) -> f32 {
     return abs(p.y - wave);
 }
 
-// === LAYER: Technical Diagrams ===
-
-// Grid pattern
-fn technicalGrid(p: vec2f, spacing: f32, thickness: f32) -> f32 {
-    let grid = abs(fract2(p / spacing - 0.5) - 0.5) / (spacing * 0.5);
-    return min(grid.x, grid.y) - thickness;
-}
-
-// Dotted line
-fn dottedLine(p: vec2f, y: f32, dotSpacing: f32, dotSize: f32) -> f32 {
-    let distToLine = abs(p.y - y);
-    let xMod = fract((p.x + 100.0) / dotSpacing);
-    let dotMask = smoothstep(0.5 + dotSize, 0.5 - dotSize, abs(xMod - 0.5));
-    return distToLine * (1.0 - dotMask * 0.8);
-}
-
-// Circle with radius markers
-fn technicalCircle(p: vec2f, center: vec2f, radius: f32, thickness: f32) -> f32 {
-    return abs(length(p - center) - radius) - thickness;
-}
-
-// Arrow/flow lines
-fn flowLine(p: vec2f, start: vec2f, end: vec2f, thickness: f32) -> f32 {
-    let pa = p - start;
-    let ba = end - start;
-    let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h) - thickness;
-}
-
-fn technicalLayer(p: vec2f, time: f32) -> vec4f {
-    var dist = 1000.0;
-    
-    // Thin grid (very subtle)
-    let grid = technicalGrid(p, 0.5, 0.002);
-    dist = min(dist, grid);
-    
-    // Horizontal dotted lines at transition zone
-    let dottedLine1 = dottedLine(p, -0.25, 0.08, 0.015);
-    let dottedLine2 = dottedLine(p, -0.35, 0.1, 0.012);
-    let dottedLine3 = dottedLine(p, -0.45, 0.09, 0.013);
-    
-    dist = min(dist, dottedLine1);
-    dist = min(dist, dottedLine2);
-    dist = min(dist, dottedLine3);
-    
-    // Small technical circles scattered
-    let circle1 = technicalCircle(p, vec2f(-0.7, -0.3), 0.15, 0.003);
-    let circle2 = technicalCircle(p, vec2f(0.6, -0.4), 0.12, 0.003);
-    let circle3 = technicalCircle(p, vec2f(0.0, -0.5), 0.08, 0.002);
-    
-    dist = min(dist, min(circle1, min(circle2, circle3)));
-    
-    // Flow arrows
-    let arrow1 = flowLine(p, vec2f(-0.9, -0.3), vec2f(-0.5, -0.3), 0.002);
-    let arrow2 = flowLine(p, vec2f(0.4, -0.4), vec2f(0.8, -0.4), 0.002);
-    
-    dist = min(dist, min(arrow1, arrow2));
-    
-    // Vertical measurement lines
-    let vLine1 = abs(p.x + 0.85) - 0.001;
-    let vLine2 = abs(p.x - 0.85) - 0.001;
-    if (p.y > -0.6 && p.y < -0.2) {
-        dist = min(dist, min(vLine1, vLine2));
-    }
-    
-    // Color: red/blue technical pen style
-    let colorMix = sin(p.x * 10.0 + time) * 0.5 + 0.5;
-    let techRed = vec3f(0.8, 0.2, 0.3);
-    let techBlue = vec3f(0.2, 0.3, 0.8);
-    let lineColor = mix(techRed, techBlue, colorMix);
-    
-    // Anti-aliased line rendering
-    let alpha = smoothstep(0.005, 0.0, dist);
-    
-    return vec4f(lineColor, alpha * 0.6); // 60% opacity
-}
-
 // === LAYER: Liquid Distortion ===
 
 fn distortDomain(p: vec2f, time: f32) -> vec2f {
@@ -282,12 +205,6 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
     
     // Mix with alpha blending (stronger presence)
     col = mix(col, liquidLayer.rgb, liquidLayer.a * 1.2);
-    
-    // === LAYER 3: Technical diagrams (transition masking) ===
-    let techLayer = technicalLayer(p, t);
-    
-    // Blend technical layer (helps mask transition)
-    col = mix(col, techLayer.rgb, techLayer.a);
     
     // Texture grain
     let grain = hash(uv * 1000.0 + vec2f(t)) * 0.15;
