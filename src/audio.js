@@ -1,12 +1,24 @@
 // Ambient audio engine synchronized with visuals
 
+import { AmbientPads } from './audio/pads.js';
+import { GlitchLayer } from './audio/glitches.js';
+import { SubDrone } from './audio/drone.js';
+import { SonicParticles } from './audio/particles.js';
+import { AtmosphericSweeps } from './audio/sweeps.js';
+
 export class AmbientAudio {
     constructor() {
         this.context = null;
         this.masterGain = null;
-        this.oscillators = [];
         this.noiseNode = null;
         this.isPlaying = false;
+        
+        // Layer instances
+        this.pads = null;
+        this.glitches = null;
+        this.drone = null;
+        this.particles = null;
+        this.sweeps = null;
     }
 
     async init() {
@@ -17,14 +29,24 @@ export class AmbientAudio {
         this.masterGain.gain.value = 0.3;
         this.masterGain.connect(this.context.destination);
         
-        // Create pink noise (softer than white noise)
+        // Initialize all layers
         this.createPinkNoise();
         
-        // Create evolving drone layers
-        this.createDroneLayers();
+        // Pads disabled - too much presence
+        // this.pads = new AmbientPads(this.context, this.masterGain);
+        // this.pads.init();
         
-        // Create subtle pads
-        this.createPadLayers();
+        this.glitches = new GlitchLayer(this.context, this.masterGain);
+        this.glitches.init();
+        
+        this.drone = new SubDrone(this.context, this.masterGain);
+        this.drone.init();
+        
+        this.particles = new SonicParticles(this.context, this.masterGain);
+        this.particles.init();
+        
+        this.sweeps = new AtmosphericSweeps(this.context, this.masterGain);
+        this.sweeps.init();
     }
 
     createPinkNoise() {
@@ -65,72 +87,6 @@ export class AmbientAudio {
         this.noiseNode = pinkNoise;
     }
 
-    createDroneLayers() {
-        // Deep drone base frequencies (purple/blue feeling)
-        const droneFreqs = [55, 82.5, 110, 165]; // A1, E2, A2, E3
-        
-        droneFreqs.forEach((freq, idx) => {
-            const osc = this.context.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            
-            const gain = this.context.createGain();
-            gain.gain.value = 0.12 / (idx + 1); // Quieter for higher freqs
-            
-            // LFO for slow modulation
-            const lfo = this.context.createOscillator();
-            lfo.type = 'sine';
-            lfo.frequency.value = 0.08 + idx * 0.02; // Slow modulation
-            
-            const lfoGain = this.context.createGain();
-            lfoGain.gain.value = 2 + idx * 0.5;
-            
-            lfo.connect(lfoGain);
-            lfoGain.connect(osc.frequency);
-            
-            osc.connect(gain);
-            gain.connect(this.masterGain);
-            
-            this.oscillators.push({ osc, lfo, gain });
-        });
-    }
-
-    createPadLayers() {
-        // Higher frequency pads (pink/purple feeling)
-        const padFreqs = [220, 330, 440, 660]; // A3, E4, A4, E5
-        
-        padFreqs.forEach((freq, idx) => {
-            const osc = this.context.createOscillator();
-            osc.type = 'triangle';
-            osc.frequency.value = freq;
-            
-            const gain = this.context.createGain();
-            gain.gain.value = 0.05 / (idx + 1);
-            
-            // Filter for warmth
-            const filter = this.context.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 2000 - idx * 200;
-            filter.Q.value = 1.5;
-            
-            // LFO for pad modulation
-            const lfo = this.context.createOscillator();
-            lfo.type = 'sine';
-            lfo.frequency.value = 0.15 + idx * 0.05;
-            
-            const lfoGain = this.context.createGain();
-            lfoGain.gain.value = 3 + idx;
-            
-            lfo.connect(lfoGain);
-            lfoGain.connect(osc.frequency);
-            
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(this.masterGain);
-            
-            this.oscillators.push({ osc, lfo, gain, filter });
-        });
-    }
 
     start() {
         if (this.isPlaying) return;
@@ -140,24 +96,14 @@ export class AmbientAudio {
             this.context.resume();
         }
         
-        // Start all oscillators
-        this.oscillators.forEach(({ osc, lfo }) => {
-            osc.start();
-            lfo.start();
-        });
+        // Start all layers
+        // this.pads.start(); // Disabled
+        this.drone.start();
+        this.glitches.start();
+        this.particles.start();
+        this.sweeps.start();
         
         this.isPlaying = true;
-    }
-
-    stop() {
-        if (!this.isPlaying) return;
-        
-        this.oscillators.forEach(({ osc, lfo }) => {
-            osc.stop();
-            lfo.stop();
-        });
-        
-        this.isPlaying = false;
     }
 
     // Modulate audio based on visual parameters
@@ -166,25 +112,9 @@ export class AmbientAudio {
         
         const { time, colorIntensity = 0.5, movement = 0.5 } = params;
         
-        // Modulate drone layers based on movement
-        this.oscillators.slice(0, 4).forEach(({ gain }, idx) => {
-            const targetGain = (0.12 / (idx + 1)) * (0.8 + movement * 0.4);
-            gain.gain.linearRampToValueAtTime(
-                targetGain,
-                this.context.currentTime + 0.5
-            );
-        });
-        
-        // Modulate pad brightness based on color intensity
-        this.oscillators.slice(4).forEach(({ filter }, idx) => {
-            if (filter) {
-                const targetFreq = (2000 - idx * 200) * (0.7 + colorIntensity * 0.6);
-                filter.frequency.linearRampToValueAtTime(
-                    targetFreq,
-                    this.context.currentTime + 0.3
-                );
-            }
-        });
+        // Update all layers
+        // this.pads.updateFromVisuals(colorIntensity, movement); // Disabled
+        this.drone.updateFromVisuals(colorIntensity, movement);
     }
 
     pause() {
@@ -193,6 +123,9 @@ export class AmbientAudio {
             this.context.currentTime + 0.2
         );
         this.isPlaying = false;
+        this.glitches.stop();
+        this.particles.stop();
+        this.sweeps.stop();
     }
 
     resume() {
@@ -201,6 +134,9 @@ export class AmbientAudio {
             this.context.currentTime + 0.2
         );
         this.isPlaying = true;
+        this.glitches.start();
+        this.particles.start();
+        this.sweeps.start();
     }
 
     setVolume(volume) {
