@@ -17,6 +17,15 @@
         z-index: 1000;
       }
       
+      #start-prompt {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+      }
+      
+      #start-prompt button,
       #audio-controls button {
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(10px);
@@ -26,53 +35,29 @@
         height: 60px;
         border-radius: 50%;
         cursor: pointer;
-        font-size: 24px;
         transition: all 0.3s;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 0;
       }
       
+      #start-prompt button:hover,
       #audio-controls button:hover {
         background: rgba(255, 255, 255, 0.25);
         transform: scale(1.1);
       }
       
+      #start-prompt button:active,
       #audio-controls button:active {
         transform: scale(0.95);
       }
       
-      #start-prompt {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 2000;
-      }
-      
-      #start-prompt button {
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 24px;
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      #start-prompt button:hover {
-        background: rgba(255, 255, 255, 0.25);
-        transform: scale(1.1);
-      }
-      
-      #start-prompt button:active {
-        transform: scale(0.95);
+      .icon-play,
+      .icon-pause {
+        fill: white;
+        width: 20px;
+        height: 20px;
       }
       
       .hidden {
@@ -84,11 +69,19 @@
     <div id="app"></div>
     
     <div id="start-prompt">
-      <button id="start-audio">▶️</button>
+      <button id="start-audio">
+        <svg class="icon-play" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      </button>
     </div>
     
     <div id="audio-controls" class="hidden">
-      <button id="toggle-audio">⏸️</button>
+      <button id="toggle-audio">
+        <svg class="icon-pause" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+        </svg>
+      </button>
     </div>
     
     <script type="module" src="/src/main.js"></script>

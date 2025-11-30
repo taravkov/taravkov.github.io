@@ -46,12 +46,20 @@ async function init() {
         // Play/pause toggle
         toggleButton.addEventListener('click', () => {
             if (audioPlaying) {
-                audio.setVolume(0);
-                toggleButton.textContent = '▶️';
+                audio.pause();
+                toggleButton.innerHTML = `
+                    <svg class="icon-play" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                `;
                 audioPlaying = false;
             } else {
-                audio.setVolume(0.3);
-                toggleButton.textContent = '⏸️';
+                audio.resume();
+                toggleButton.innerHTML = `
+                    <svg class="icon-pause" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
+                `;
                 audioPlaying = true;
             }
         });

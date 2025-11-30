@@ -166,13 +166,6 @@ export class AmbientAudio {
         
         const { time, colorIntensity = 0.5, movement = 0.5 } = params;
         
-        // Modulate master volume based on visual intensity
-        const targetVolume = 0.2 + colorIntensity * 0.2;
-        this.masterGain.gain.linearRampToValueAtTime(
-            targetVolume,
-            this.context.currentTime + 0.5
-        );
-        
         // Modulate drone layers based on movement
         this.oscillators.slice(0, 4).forEach(({ gain }, idx) => {
             const targetGain = (0.12 / (idx + 1)) * (0.8 + movement * 0.4);
@@ -192,6 +185,22 @@ export class AmbientAudio {
                 );
             }
         });
+    }
+
+    pause() {
+        this.masterGain.gain.linearRampToValueAtTime(
+            0,
+            this.context.currentTime + 0.2
+        );
+        this.isPlaying = false;
+    }
+
+    resume() {
+        this.masterGain.gain.linearRampToValueAtTime(
+            0.3,
+            this.context.currentTime + 0.2
+        );
+        this.isPlaying = true;
     }
 
     setVolume(volume) {
