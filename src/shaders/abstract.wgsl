@@ -202,11 +202,11 @@ fn fs_main(@location(0) uv : vec2f) -> @location(0) vec4f {
                           smoothstep(1.0, 0.7, flamesElements.a);
     col = mix(col, flamesElements.rgb, flameTransition * 0.25);
     
-    // Heavy grain texture (like reference)
-    let grain1 = hash(uv * 1500.0 + vec2f(t * 0.1)) * 0.25;
-    let grain2 = hash(uv * 800.0 - vec2f(t * 0.05)) * 0.15;
+    // Subtle grain texture (reduced for mobile)
+    let grain1 = hash(uv * 1500.0 + vec2f(t * 0.1)) * 0.08;
+    let grain2 = hash(uv * 800.0 - vec2f(t * 0.05)) * 0.05;
     let grain = (grain1 + grain2) * 0.5;
-    col += grain - 0.2;
+    col += grain - 0.065;
     
     // Vignette
     let vignette = 1.0 - length(p) * 0.2;

@@ -151,9 +151,9 @@ fn flamesLayer(p: vec2f, time: f32) -> vec4f {
         col = mix(col, stripeCol, stripeBlend * 0.4);
     }
     
-    // === FINE GRAIN TEXTURE ===
-    let grain = hash(p * 2000.0 + time * 0.05) * 0.15;
-    col += grain - 0.075;
+    // === FINE GRAIN TEXTURE (reduced for mobile) ===
+    let grain = hash(p * 2000.0 + time * 0.05) * 0.05;
+    col += grain - 0.025;
     
     // Soft alpha mask with gradual falloff
     let baseMask = smoothstep(0.0, 0.2, length(col));
