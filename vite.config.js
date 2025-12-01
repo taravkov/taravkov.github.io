@@ -13,8 +13,8 @@ export default defineConfig({
     emptyOutDir: true,
     // Генерировать source maps для отладки
     sourcemap: false,
-    // Минимизировать код
-    minify: 'terser',
+    // Минимизировать код (esbuild быстрее и встроен в Vite)
+    minify: 'esbuild',
     // Оптимизации
     rollupOptions: {
       output: {
